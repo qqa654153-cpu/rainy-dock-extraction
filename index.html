@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>暴雨夜码头 · 战术撤离行动</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      interpolate-size: allow-keywords;
+      --brand-amber: #ff9f2e;
+      --brand-cyan: #48d5ff;
+      --brand-green: #30f28c;
+      --brand-red: #ff3e3e;
+      --hud-bg: rgba(9, 14, 24, 0.72);
+      --hud-border: rgba(130, 175, 225, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #060a12;
+      color: #e9f1fc;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    /* 战术 HUD 覆盖层 */
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      contain: layout style;
+      z-index: 10;
+    }
+
+    /* 顶部方位提示罗盘 */
+    #compass-wrap {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(440px, 76vw);
+      height: 38px;
+      background: linear-gradient(90deg, transparent, var(--hud-bg) 18%, var(--hud-bg) 82%, transparent);
+      border-bottom: 1px solid var(--hud-border);
+      overflow: hidden;
+      mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+    }
+
+    #compass-center-caret {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 10px;
+      background: var(--brand-amber);
+      z-index: 3;
+    }
+
+    #compass-track, #compass-pips {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      height: 100%;
+      will-change: transform;
+    }
+
+    .cmp-major {
+      position: absolute;
+      top: 12px;
+      transform: translateX(-50%);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #c9ddf5;
+      white-space: nowrap;
+    }
+
+    .cmp-tick {
+      position: absolute;
+      top: 22px;
+      width: 1px;
+      height: 8px;
+      background: rgba(180, 210, 240, 0.35);
+    }
+
+    .cmp-pip {
+      position: absolute;
+      top: 4px;
+      left: 0;
+      margin-left: -4px;
+      width: 8px;
+      height: 8px;
+      transform: translate3d(0, 0, 0) rotate(45deg);
+      will-change: transform;
+    }
+    .pip-relay { background: var(--brand-amber); box-shadow: 0 0 8px var(--brand-amber); }
+    .pip-evac { background: var(--brand-green); box-shadow: 0 0 8px var(--brand-green); }
+    .pip-enemy { background: var(--brand-red); box-shadow: 0 0 6px var(--brand-red); border-radius: 50%; }
+    .pip-tut { background: var(--brand-cyan); box-shadow: 0 0 8px var(--brand-cyan); }
+
+    /* 右上角 FPS 徽标与目标简报 */
+    #top-right-panel {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    #fps-chip {
+      font-family: "Consolas", monospace;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      color: var(--brand-cyan);
+    }
+
+    #difficulty-badge {
+      font-family: "Consolas", "Microsoft YaHei", sans-serif;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      color: #b7d8f7;
+      letter-spacing: 0.03em;
+    }
+    #difficulty-badge[data-diff="recruit"] {
+      border-color: rgba(72, 213, 255, 0.55);
+      color: #7ee8ff;
+    }
+    #difficulty-badge[data-diff="veteran"] {
+      border-color: rgba(255, 159, 46, 0.58);
+      color: #ffc56b;
+    }
+    #difficulty-badge[data-diff="realism"] {
+      border-color: rgba(255, 62, 62, 0.62);
+      color: #ff8e8e;
+      background: rgba(30, 10, 14, 0.8);
+    }
+
+    #objective-card {
+      padding: 8px 14px;
+      background: linear-gradient(135deg, rgba(10, 16, 28, 0.9), rgba(8, 13, 22, 0.84));
+      border-right: 3px solid var(--brand-amber);
+      border-top: 1px solid rgba(130, 175, 225, 0.3);
+      border-bottom: 1px solid rgba(130, 175, 225, 0.3);
+      border-left: 1px solid rgba(130, 175, 225, 0.3);
+      text-align: right;
+    }
+
+    #objective-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f4f8ff;
+      letter-spacing: 0.04em;
+    }
+
+    #relay-leds {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .relay-pip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: rgba(255, 159, 46, 0.14);
+      border: 1px solid rgba(255, 159, 46, 0.55);
+      color: #ffd092;
+    }
+
+    .relay-pip.done {
+      background: rgba(48, 242, 140, 0.18);
+      border-color: var(--brand-green);
+      color: var(--brand-green);
+      text-decoration: line-through;
+    }
+
+    /* 新手教程紧凑进度胶囊（复用右上角任务卡，不新增额外面板） */
+    .tut-chips {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 5px;
+      margin-top: 6px;
+      max-width: 310px;
+    }
+    .tut-chips.active { display: flex; }
+
+    .tut-chip {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+      background: rgba(72, 213, 255, 0.12);
+      border: 1px solid rgba(72, 213, 255, 0.42);
+      color: #b7eaff;
+    }
+    .tut-chip.done {
+      background: rgba(48, 242, 140, 0.18);
+      border-color: var(--brand-green);
+      color: var(--brand-green);
+    }
+    .tut-chip.warn {
+      background: rgba(255, 159, 46, 0.18);
+      border-color: var(--brand-amber);
+      color: #ffd092;
+    }
+    .tut-chip.danger {
+      background: rgba(255, 62, 62, 0.22);
+      border-color: var(--brand-red);
+      color: #ffb8b8;
+    }
+    .tut-skip-hint {
+      font-size: 11px;
+      color: #93b7db;
+      margin-top: 4px;
+      letter-spacing: 0.03em;
+    }
+    #objective-card.tutorial-mode {
+      border-right-color: var(--brand-cyan);
+    }
+    #objective-card.training-mode {
+      border-right-color: var(--brand-green);
+    }
+    #objective-card.training-mode.urgent {
+      border-right-color: var(--brand-red);
+    }
+
+    /* 3D 距离标记 */
+    #markers-layer {
+      position: absolute;
+      inset: 0;
+    }
+
+    .world-marker {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transform: translate3d(-999px, -999px, 0);
+      margin-left: -40px;
+      margin-top: -12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-shadow: 0 1px 4px #000;
+    }
+
+    .mk-diamond {
+      width: 10px;
+      height: 10px;
+      transform: rotate(45deg);
+      border: 2px solid currentColor;
+      flex-shrink: 0;
+    }
+
+    .mk-relay { color: var(--brand-amber); }
+    .mk-evac { color: var(--brand-green); }
+    .mk-tut { color: var(--brand-cyan); }
+
+    .mk-text {
+      background: rgba(6, 10, 18, 0.72);
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      white-space: nowrap;
+    }
+
+    /* 中心准星与命中反馈 */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+    }
+
+    .ch-dot {
+      position: absolute;
+      width: 2.5px;
+      height: 2.5px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.94);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.78), 0 0 4px rgba(0, 0, 0, 0.9);
+      transition: opacity 0.08s linear;
+    }
+
+    .ch-tick {
+      position: absolute;
+      background: rgba(235, 245, 255, 0.9);
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.85);
+      transition: opacity 0.08s linear;
+    }
+    .ch-v { width: 2px; height: 8px; }
+    .ch-h { width: 8px; height: 2px; }
+
+    /* Phase 3+: MK-14 DMR 2.5D 高倍光学狙击镜（合成层透明/缩放渲染，清透视野与战术 V 字分划） */
+    #scope-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 4;
+      background: radial-gradient(
+        circle at 50% 50%,
+        rgba(8, 16, 26, 0.0) 0%,
+        rgba(8, 16, 26, 0.04) 36%,
+        rgba(4, 8, 14, 0.58) 44%,
+        rgba(2, 4, 8, 0.95) 54%,
+        rgba(1, 2, 5, 0.98) 100%
+      );
+      will-change: opacity, transform;
+    }
+
+    #scope-svg {
+      width: min(86vmin, 760px);
+      height: min(86vmin, 760px);
+      overflow: visible;
+    }
+
+    #hud[data-realism="true"] #crosshair {
+      opacity: 0 !important;
+    }
+
+    .hitmarker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      transform: translate(-50%, -50%) scale(0.8);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.08s ease-out, opacity 0.08s ease-out;
+    }
+    .hitmarker::before, .hitmarker::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(45deg, transparent 44%, currentColor 45%, currentColor 55%, transparent 56%),
+        linear-gradient(-45deg, transparent 44%, currentColor 45%, currentColor 55%, transparent 56%);
+      mask-image: radial-gradient(circle, transparent 22%, #000 24%);
+    }
+    .hitmarker.active {
+      color: #ffffff;
+      opacity: 0.95;
+      transform: translate(-50%, -50%) scale(1.0);
+    }
+    .hitmarker.crit {
+      color: #ffd13b;
+      transform: translate(-50%, -50%) scale(1.26);
+    }
+    .hitmarker.kill {
+      color: #ff3838;
+      transform: translate(-50%, -50%) scale(1.38);
+    }
+    .hitmarker.blocked {
+      color: #4caeff;
+      transform: translate(-50%, -50%) scale(1.14);
+    }
+
+    /* 长按 E 环形进度条 */
+    #interact-wrap {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px 6px 8px;
+      background: rgba(8, 13, 22, 0.88);
+      border: 1px solid rgba(255, 166, 46, 0.55);
+      border-radius: 999px;
+      opacity: 0;
+      transition: opacity 0.14s ease;
+    }
+    #interact-wrap.active { opacity: 1; }
+    #interact-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffe2b3;
+    }
+
+    /* 左下生命值 */
+    #bottom-left {
+      position: absolute;
+      bottom: 22px;
+      left: 24px;
+      width: 240px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(10, 16, 28, 0.9), rgba(8, 13, 22, 0.84));
+      border-left: 3px solid var(--brand-cyan);
+      border-top: 1px solid rgba(130, 175, 225, 0.3);
+      border-right: 1px solid rgba(130, 175, 225, 0.3);
+      border-bottom: 1px solid rgba(130, 175, 225, 0.3);
+    }
+
+    .hp-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .hp-label { font-size: 11px; letter-spacing: 0.08em; color: #90b1d4; }
+    #hp-text { font-family: "Consolas", monospace; font-size: 22px; font-weight: 700; color: #f4f8ff; }
+    #regen-tag { font-size: 11px; color: var(--brand-green); opacity: 0; transition: opacity 0.2s; }
+
+    .hp-track {
+      width: 100%;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #hp-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #27a8ff, #58f0c8);
+      transition: width 0.12s linear;
+    }
+    #hp-fill[data-low="true"] {
+      background: linear-gradient(90deg, #d92626, #ff6a3d);
+    }
+
+    /* 右下武器与弹药 */
+    #bottom-right {
+      position: absolute;
+      bottom: 22px;
+      right: 24px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, rgba(10, 16, 28, 0.9), rgba(8, 13, 22, 0.84));
+      border-right: 3px solid var(--brand-cyan);
+      border-top: 1px solid rgba(130, 175, 225, 0.3);
+      border-left: 1px solid rgba(130, 175, 225, 0.3);
+      border-bottom: 1px solid rgba(130, 175, 225, 0.3);
+      text-align: right;
+    }
+
+    .wpn-name {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: #8fb4da;
+    }
+
+    .ammo-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: baseline;
+      gap: 6px;
+      font-family: "Consolas", monospace;
+    }
+
+    #ammo-cur { font-size: 28px; font-weight: 700; color: #ffffff; }
+    #ammo-cur.low { color: var(--brand-amber); }
+    .ammo-res { font-size: 15px; color: #7fa0c4; }
+
+    .wpn-hints {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 4px;
+      font-size: 11px;
+      color: #93b0cf;
+    }
+
+    #reload-badge {
+      display: none;
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--brand-amber);
+    }
+    #reload-badge.active { display: block; }
+
+    /* 底部电台剧情字幕（宽屏置于中下方空白带，窄屏自动上移至角面板上方，确保零遮挡） */
+    #radio-box {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      width: min(500px, calc(100vw - 560px));
+      padding: 10px 16px;
+      background: rgba(7, 11, 20, 0.86);
+      border: 1px solid rgba(72, 213, 255, 0.38);
+      border-left: 3px solid var(--brand-cyan);
+      opacity: 0;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    @media (max-width: 1120px) {
+      #radio-box {
+        bottom: 108px;
+        width: min(500px, calc(100vw - 48px));
+      }
+    }
+
+    #radio-box.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #radio-box.tutorial {
+      border-color: rgba(72, 213, 255, 0.72);
+      border-left: 4px solid var(--brand-cyan);
+      box-shadow: 0 8px 28px rgba(0, 18, 36, 0.65);
+    }
+
+    #radio-speaker {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--brand-cyan);
+      margin-bottom: 3px;
+    }
+
+    #radio-speaker::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--brand-cyan);
+      opacity: 0.45;
+      flex-shrink: 0;
+    }
+
+    #radio-box.speaking #radio-speaker::before {
+      opacity: 1;
+      background: #4effb0;
+      box-shadow: 0 0 8px #4effb0;
+      animation: radio-pulse 0.65s ease-in-out infinite alternate;
+    }
+
+    @keyframes radio-pulse {
+      from { transform: scale(0.85); opacity: 0.65; }
+      to { transform: scale(1.25); opacity: 1; }
+    }
+
+    #radio-text {
+      font-size: 13.5px;
+      line-height: 1.45;
+      color: #eef5ff;
+    }
+
+    /* 受击屏幕红晕与方向指示弧 */
+    #damage-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9;
+      background: radial-gradient(circle at center, transparent 52%, rgba(220, 28, 28, 0.56) 100%);
+      opacity: 0;
+      transition: opacity 0.16s ease-out;
+    }
+    #damage-vignette.active { opacity: 1; }
+
+    #damage-arcs {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .dmg-arc {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 260px;
+      height: 260px;
+      margin: -130px 0 0 -130px;
+      opacity: 0;
+      transform: rotate(var(--arc-deg, 0deg));
+      will-change: opacity, transform;
+    }
+    .dmg-arc svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      filter: drop-shadow(0 0 8px rgba(255, 48, 48, 0.85));
+    }
+
+    /* 原生弹窗与控件（符合现代 Web 标准） */
+    dialog {
+      border: 1px solid rgba(110, 170, 235, 0.35);
+      border-radius: 8px;
+      background: rgba(10, 16, 28, 0.94);
+      color: #edf4ff;
+      width: min(570px, 94vw);
+      max-height: 92dvh;
+      overflow-y: auto;
+      padding: 18px 22px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.72);
+    }
+
+    dialog:modal {
+      overscroll-behavior: contain;
+    }
+
+    dialog::backdrop {
+      overflow: hidden;
+      overscroll-behavior: contain;
+      background: rgba(4, 7, 14, 0.72);
+      backdrop-filter: blur(6px);
+    }
+
+    #dlg-title {
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: #ffffff;
+    }
+
+    #dlg-desc {
+      margin: 0 0 12px;
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: #adc3dd;
+    }
+
+    #dlg-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+    }
+    #dlg-stats[hidden] { display: none; }
+    #dlg-stats > div {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    #dlg-stats span { color: #8da7c4; }
+    #dlg-stats strong { color: var(--brand-amber); font-family: "Consolas", monospace; }
+
+    .ctrl-brief {
+      font-size: 12px;
+      color: #96b0cc;
+      background: rgba(72, 213, 255, 0.06);
+      border: 1px solid rgba(72, 213, 255, 0.2);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
+
+    .opt-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .opt-row {
+      display: grid;
+      grid-template-columns: 96px 1fr 48px;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #d6e6fa;
+    }
+
+    .opt-row.opt-select-row {
+      grid-template-columns: 96px 1fr;
+    }
+
+    select {
+      background: #131d2f;
+      color: #eef5ff;
+      border: 1px solid rgba(130, 175, 225, 0.35);
+      border-radius: 5px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* 原生 Range Slider（显式双引擎规则） */
+    input[type="range"] {
+      --slider-track-size: 6px;
+      --slider-thumb-size: 16px;
+      --slider-track-color: rgba(255, 255, 255, 0.16);
+      --slider-fill-color: var(--brand-cyan);
+      --slider-thumb-color: #ffffff;
+      --attr-min: 0;
+      --attr-max: 100;
+      --control-value: 50;
+      --slider-progress: calc((var(--control-value) - var(--attr-min)) / (var(--attr-max) - var(--attr-min)) * 100%);
+      appearance: none;
+      width: 100%;
+      height: 26px;
+      margin: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: var(--slider-track-size);
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--slider-fill-color) var(--slider-progress), var(--slider-track-color) var(--slider-progress));
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: var(--slider-thumb-size);
+      height: var(--slider-thumb-size);
+      border-radius: 50%;
+      background: var(--slider-thumb-color);
+      margin-top: calc((var(--slider-track-size) - var(--slider-thumb-size)) / 2);
+      box-shadow: 0 0 8px rgba(72, 213, 255, 0.65);
+    }
+    input[type="range"]::-moz-range-track {
+      height: var(--slider-track-size);
+      border-radius: 999px;
+      background: var(--slider-track-color);
+    }
+    input[type="range"]::-moz-range-progress {
+      height: var(--slider-track-size);
+      border-radius: 999px;
+      background: var(--slider-fill-color);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: var(--slider-thumb-size);
+      height: var(--slider-thumb-size);
+      border: 0;
+      border-radius: 50%;
+      background: var(--slider-thumb-color);
+    }
+    input[type="range"]:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 4px;
+    }
+
+    .opt-val {
+      font-family: "Consolas", monospace;
+      text-align: right;
+      color: var(--brand-cyan);
+    }
+
+    .dlg-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .dlg-btn {
+      flex: 1;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: transform 0.08s ease, filter 0.14s ease, background 0.14s ease;
+    }
+    .dlg-btn:active { transform: translateY(1px); }
+    .dlg-btn:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 2px;
+    }
+    .dlg-btn-primary {
+      background: linear-gradient(135deg, #1b9cf0, #2fd6ff);
+      color: #031222;
+      border: 0;
+      box-shadow: 0 4px 16px rgba(47, 214, 255, 0.35);
+    }
+    .dlg-btn-primary:hover { filter: brightness(1.08); }
+    .dlg-btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #d7e8ff;
+      border: 1px solid rgba(110, 170, 235, 0.42);
+    }
+    .dlg-btn-secondary:hover {
+      background: rgba(72, 213, 255, 0.14);
+      border-color: var(--brand-cyan);
+    }
+    .dlg-btn[hidden],
+    #relay-leds[hidden],
+    #tut-skip-hint[hidden] { display: none; }
+
+    .dlg-btn-primary[data-mode="combat"] {
+      background: linear-gradient(90deg, #ffaa33, #ff7e29);
+      color: #061019;
+      box-shadow: 0 4px 16px rgba(255, 150, 46, 0.32);
+    }
+    .dlg-btn-primary[data-mode="training"] {
+      background: linear-gradient(135deg, #22d68a, #48d5ff);
+      color: #04151c;
+      box-shadow: 0 4px 16px rgba(48, 242, 140, 0.3);
+    }
+    .dlg-sub-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .dlg-btn-training {
+      background: rgba(48, 242, 140, 0.1);
+      color: #b8fce0;
+      border: 1px solid rgba(48, 242, 140, 0.42);
+    }
+    .dlg-btn-training:hover {
+      background: rgba(48, 242, 140, 0.18);
+      border-color: var(--brand-green);
+    }
+
+    /* 训练中心视图与无障碍选项卡 */
+    .train-tablist {
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid rgba(130, 175, 225, 0.25);
+      margin-bottom: 14px;
+    }
+    .train-tab {
+      position: relative;
+      flex: 1;
+      padding: 10px 8px;
+      background: transparent;
+      border: 0;
+      color: #96b0cc;
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: color 0.14s ease, background 0.14s ease;
+    }
+    .train-tab:hover {
+      color: #e6f2ff;
+      background: rgba(72, 213, 255, 0.07);
+    }
+    .train-tab:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: -2px;
+    }
+    .train-tab[aria-selected="true"] {
+      color: #ffffff;
+    }
+    .train-tab[aria-selected="true"]::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 -1px;
+      border-block-end: 3px solid var(--brand-cyan);
+    }
+
+    .train-panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(130, 175, 225, 0.2);
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .train-panel-desc {
+      margin: 0 0 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #b9cfe6;
+    }
+    .train-best-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      background: rgba(72, 213, 255, 0.08);
+      border: 1px solid rgba(72, 213, 255, 0.24);
+      border-radius: 5px;
+      font-size: 12.5px;
+      color: #cde8ff;
+    }
+    .train-best-strip strong {
+      color: var(--brand-amber);
+      font-family: "Consolas", monospace;
+    }
+    .new-record-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: rgba(255, 159, 46, 0.24);
+      border: 1px solid var(--brand-amber);
+      color: #ffd599;
+      font-size: 11px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .train-pills {
+      display: flex;
+      gap: 8px;
+    }
+    .train-pill {
+      flex: 1;
+      padding: 9px 10px;
+      border-radius: 5px;
+      border: 1px solid rgba(130, 175, 225, 0.3);
+      background: rgba(255, 255, 255, 0.04);
+      color: #c8dcf2;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .train-pill:hover {
+      border-color: var(--brand-cyan);
+    }
+    .train-pill[aria-pressed="true"] {
+      background: rgba(72, 213, 255, 0.2);
+      border-color: var(--brand-cyan);
+      color: #ffffff;
+      box-shadow: inset 0 -2px 0 var(--brand-cyan);
+    }
+    .train-pill:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 2px;
+    }
+
+    .stage-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .stage-card {
+      text-align: left;
+      padding: 9px 10px;
+      border-radius: 5px;
+      border: 1px solid rgba(130, 175, 225, 0.28);
+      background: rgba(255, 255, 255, 0.04);
+      color: #d6e6fa;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .stage-card:hover {
+      border-color: var(--brand-cyan);
+    }
+    .stage-card[aria-pressed="true"] {
+      background: rgba(48, 242, 140, 0.14);
+      border-color: var(--brand-green);
+      color: #ffffff;
+    }
+    .stage-card:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 2px;
+    }
+    .stage-card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .stage-card-meta {
+      font-size: 11px;
+      color: #93b3d6;
+      font-family: "Consolas", monospace;
+    }
+    .stage-card[aria-pressed="true"] .stage-card-meta {
+      color: #aef7cf;
+    }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 10px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12.5px;
+      color: #d6e6fa;
+      cursor: pointer;
+    }
+    .switch-row-hint {
+      display: block;
+      font-size: 11px;
+      color: #8aa5c4;
+      margin-top: 2px;
+    }
+    input[type="checkbox"][switch] {
+      accent-color: var(--brand-green);
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(130, 175, 225, 0.35);
+      margin: 0;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    input[type="checkbox"][switch]::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #e6f0ff;
+      transition: transform 0.15s ease;
+    }
+    input[type="checkbox"][switch]:checked {
+      background: rgba(48, 242, 140, 0.45);
+      border-color: var(--brand-green);
+    }
+    input[type="checkbox"][switch]:checked::before {
+      transform: translateX(18px);
+      background: #ffffff;
+    }
+    input[type="checkbox"][switch]:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 3px;
+    }
+
+    #menu-view-main[hidden],
+    #menu-view-training[hidden],
+    .train-subpane[hidden],
+    .dlg-sub-actions[hidden],
+    .ctrl-brief[hidden],
+    .opt-group[hidden],
+    #loadout-panel[hidden],
+    #career-best-strip[hidden],
+    #perk-strip[hidden],
+    #holdout-bar[hidden] { display: none; }
+
+    /* 无尽空投技能状态条 & 极简渐隐击杀播报 */
+    #perk-strip {
+      position: absolute;
+      bottom: 84px;
+      left: 24px;
+      max-width: 280px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      pointer-events: none;
+    }
+    .perk-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: rgba(10, 18, 32, 0.84);
+      border: 1px solid rgba(72, 213, 255, 0.45);
+      color: #8eeeff;
+      letter-spacing: 0.03em;
+    }
+
+    #kill-feed {
+      position: absolute;
+      top: 22px;
+      left: 24px;
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+    .kf-item {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #e6f2ff;
+      background: rgba(8, 13, 24, 0.78);
+      border: 1px solid rgba(130, 175, 225, 0.22);
+      border-left: 3px solid var(--brand-cyan);
+      border-radius: 3px;
+      opacity: 1;
+      transition: opacity 0.35s ease;
+    }
+    .kf-item.crit {
+      border-left-color: #ffd13b;
+      color: #fff2be;
+    }
+    .kf-item.silent {
+      border-left-color: var(--brand-green);
+      color: #c2ffe0;
+    }
+    .kf-item.fading {
+      opacity: 0;
+    }
+    #hud[data-realism="true"] #kill-feed { display: none; }
+
+    dialog { width: min(640px, 95vw); }
+
+    /* Phase 3: HUD 隐匿状态 / 倒计时 / 战术副栏 */
+    #stealth-chip {
+      align-self: flex-end;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      background: rgba(9, 18, 28, 0.8);
+      border: 1px solid rgba(56, 217, 255, 0.35);
+      color: #6ee7ff;
+    }
+    #stealth-chip[data-state="SUSPICIOUS"] {
+      border-color: rgba(255, 198, 56, 0.65);
+      color: #ffd15c;
+    }
+    #stealth-chip[data-state="COMBAT"] {
+      border-color: rgba(255, 62, 56, 0.72);
+      color: #ff6b63;
+      background: rgba(34, 10, 12, 0.84);
+    }
+
+    #holdout-bar {
+      margin-top: 7px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(130, 175, 225, 0.22);
+    }
+    .holdout-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #ffc55c;
+      margin-bottom: 4px;
+    }
+    .holdout-track {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #holdout-fill {
+      height: 100%;
+      width: 100%;
+      transform-origin: left center;
+      transform: scaleX(1);
+      background: linear-gradient(90deg, #ff9f2e, #3bf08c);
+    }
+
+    .wpn-subrow {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 5px;
+    }
+    .wpn-tag {
+      font-size: 11px;
+      font-family: "Consolas", monospace;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(130, 175, 225, 0.24);
+      color: #c2dcf7;
+    }
+    .wpn-tag.sup-on { border-color: rgba(56, 217, 255, 0.55); color: #67e6ff; }
+    .wpn-tag.sup-off { border-color: rgba(255, 159, 46, 0.55); color: #ffc56b; }
+    #hud[data-realism="true"] .wpn-hints { display: none; }
+
+    /* Phase 3: 局前配装、涂装、难度与词缀选择卡片 (遵守 MWG card / motion 规范) */
+    #career-best-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 7px 11px;
+      border-radius: 5px;
+      background: rgba(72, 213, 255, 0.07);
+      border: 1px solid rgba(72, 213, 255, 0.24);
+      font-size: 12px;
+      color: #c9e4ff;
+    }
+    #career-best-strip strong { color: var(--brand-amber); font-family: "Consolas", monospace; }
+
+    .loadout-fieldset {
+      border: 0;
+      margin: 0 0 10px;
+      padding: 0;
+    }
+    .loadout-legend {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #8fb4da;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .card-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+    label.card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 7px 9px;
+      border-radius: 5px;
+      border: 2px solid rgba(130, 175, 225, 0.22);
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+      user-select: none;
+    }
+    label.card:hover {
+      border-color: rgba(130, 175, 225, 0.5);
+    }
+    label.card > input[type="radio"],
+    label.card > input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    label.card:has(> input:checked) {
+      border-color: var(--brand-cyan);
+      background: rgba(72, 213, 255, 0.13);
+      box-shadow: 0 0 0 1px rgba(72, 213, 255, 0.35);
+    }
+    label.card:has(> input:focus-visible) {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 2px;
+    }
+    label.card:has(> input:disabled) {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #eef5ff;
+    }
+    .card-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .card-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .badge-cyan {
+      background: rgba(72, 213, 255, 0.16);
+      border: 1px solid rgba(72, 213, 255, 0.5);
+      color: #82ebff;
+    }
+    .badge-muted {
+      background: rgba(145, 175, 210, 0.14);
+      border: 1px solid rgba(145, 175, 210, 0.35);
+      color: #b6cbe2;
+    }
+    .badge-amber {
+      background: rgba(255, 159, 46, 0.16);
+      border: 1px solid rgba(255, 159, 46, 0.52);
+      color: #ffcb77;
+    }
+    .badge-red {
+      background: rgba(255, 62, 62, 0.18);
+      border: 1px solid rgba(255, 62, 62, 0.55);
+      color: #ff9c9c;
+    }
+    .card-meta {
+      font-size: 10.5px;
+      color: #8eaac8;
+      line-height: 1.3;
+      padding-right: 16px;
+    }
+    label.card::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      bottom: 5px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--brand-cyan);
+      opacity: 0;
+    }
+    label.card:has(> input:checked)::after {
+      content: "✓";
+      opacity: 1;
+    }
+    label.card.diff-card[data-diff="veteran"]:has(> input:checked) {
+      border-color: var(--brand-amber);
+      background: rgba(255, 159, 46, 0.13);
+      box-shadow: 0 0 0 1px rgba(255, 159, 46, 0.35);
+    }
+    label.card.diff-card[data-diff="veteran"]:has(> input:checked)::after {
+      color: var(--brand-amber);
+    }
+    label.card.diff-card[data-diff="realism"]:has(> input:checked) {
+      border-color: var(--brand-red);
+      background: rgba(255, 62, 62, 0.13);
+      box-shadow: 0 0 0 1px rgba(255, 62, 62, 0.35);
+    }
+    label.card.diff-card[data-diff="realism"]:has(> input:checked)::after {
+      color: #ff8e8e;
+    }
+    @media (max-width: 500px) {
+      .card-grid-2, .card-grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+    #difficulty-panel {
+      margin-bottom: 10px;
+    }
+    #difficulty-panel .loadout-fieldset {
+      margin-bottom: 0;
+    }
+    #difficulty-panel[hidden],
+    #disclosure-loadout[hidden],
+    #disclosure-settings[hidden] {
+      display: none;
+    }
+    .diff-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 7px;
+      padding: 6px 10px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(130, 175, 225, 0.2);
+      font-size: 11.5px;
+      line-height: 1.45;
+      color: #bdd4ee;
+    }
+    .diff-sum-tag {
+      flex-shrink: 0;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: rgba(72, 213, 255, 0.14);
+      color: #7ee8ff;
+    }
+    details.menu-disclosure {
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(130, 175, 225, 0.22);
+      background: rgba(255, 255, 255, 0.025);
+    }
+    details.menu-disclosure > summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #d6e7fa;
+      cursor: pointer;
+      list-style: none;
+    }
+    details.menu-disclosure > summary::-webkit-details-marker {
+      display: none;
+    }
+    details.menu-disclosure > summary::marker {
+      content: "";
+    }
+    details.menu-disclosure > summary::before {
+      content: "▸";
+      display: inline-block;
+      font-size: 11px;
+      color: var(--brand-cyan);
+      transform: rotate(0deg);
+    }
+    details.menu-disclosure[open] > summary::before {
+      transform: rotate(90deg);
+    }
+    details.menu-disclosure > summary:hover {
+      background: rgba(72, 213, 255, 0.07);
+    }
+    details.menu-disclosure > summary:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 2px;
+      border-radius: 5px;
+    }
+    details.menu-disclosure::details-content {
+      block-size: 0;
+      overflow: clip;
+      contain: layout;
+    }
+    details.menu-disclosure[open]::details-content {
+      block-size: auto;
+    }
+    .disclosure-body {
+      padding: 8px 10px 6px;
+      border-top: 1px solid rgba(130, 175, 225, 0.14);
+    }
+    .disclosure-body .ctrl-brief {
+      margin-bottom: 10px;
+    }
+    .disclosure-body .opt-group {
+      margin-bottom: 4px;
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      padding: 1px 7px;
+      border-radius: 4px;
+      background: rgba(255, 176, 32, 0.2);
+      border: 1px solid var(--brand-amber);
+      color: #ffd778;
+      font-weight: 800;
+    }
+    .medal-row {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-top: 4px;
+    }
+    .medal-pill {
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 11px;
+      background: rgba(48, 242, 140, 0.14);
+      border: 1px solid rgba(48, 242, 140, 0.45);
+      color: #7effbb;
+    }
+
+    /* 无尽空投三选一弹窗 */
+    #airdrop-dialog {
+      width: min(560px, 94vw);
+    }
+    #airdrop-options {
+      display: grid;
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .airdrop-card-btn {
+      width: 100%;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 11px 13px;
+      border-radius: 6px;
+      border: 2px solid rgba(72, 213, 255, 0.3);
+      background: rgba(18, 32, 52, 0.85);
+      color: #eef5ff;
+      cursor: pointer;
+    }
+    .airdrop-card-btn:hover,
+    .airdrop-card-btn:focus-visible {
+      border-color: var(--brand-amber);
+      background: rgba(255, 159, 46, 0.14);
+      outline: none;
+    }
+    .airdrop-card-btn strong { font-size: 13.5px; color: #ffcf70; }
+    .airdrop-card-btn span { font-size: 12px; color: #b5cde6; }
+
+    #gfx-warmup-banner {
+      position: fixed;
+      inset: auto;
+      top: 18px;
+      left: 50%;
+      width: min(440px, 92vw);
+      margin: 0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid rgba(72, 213, 255, 0.45);
+      background: linear-gradient(135deg, rgba(10, 18, 32, 0.96), rgba(14, 24, 42, 0.94));
+      color: #eaf4ff;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.58);
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0;
+      transform: translate(-50%, -12px);
+      display: none;
+    }
+    #gfx-warmup-banner:is(:popover-open, .\:popover-open) {
+      display: block;
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    .warmup-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 7px;
+    }
+    .warmup-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-cyan);
+      box-shadow: 0 0 8px var(--brand-cyan);
+      flex-shrink: 0;
+    }
+    #warmup-title {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #warmup-pct {
+      font-family: "Consolas", monospace;
+      font-size: 12px;
+      color: var(--brand-cyan);
+    }
+    .warmup-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    #warmup-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--brand-cyan), var(--brand-green));
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      label.card, .airdrop-card-btn {
+        transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.12s ease;
+      }
+      details.menu-disclosure > summary::before {
+        transition: transform 0.16s ease;
+      }
+      details.menu-disclosure::details-content {
+        transition: block-size 0.22s ease, content-visibility 0.22s allow-discrete;
+      }
+      .airdrop-card-btn:hover { transform: translateY(-1px); }
+      #scope-overlay {
+        transition: opacity 0.09s ease-out, transform 0.11s ease-out;
+      }
+      #gfx-warmup-banner {
+        transition: opacity 0.22s ease, transform 0.22s ease, overlay 0.22s ease, display 0.22s ease;
+        transition-behavior: allow-discrete;
+      }
+      @starting-style {
+        #gfx-warmup-banner:is(:popover-open, .\:popover-open) {
+          opacity: 0;
+          transform: translate(-50%, -12px);
+        }
+      }
+      #warmup-fill {
+        transition: width 0.14s ease-out;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #scope-overlay {
+        transform: none !important;
+      }
+      .kf-item,
+      #gfx-warmup-banner,
+      #warmup-fill {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas" aria-label="暴雨夜集装箱码头三维射击画布"></canvas>
+  <div id="damage-vignette" aria-hidden="true"></div>
+
+  <div id="hud" aria-hidden="true">
+    <div id="damage-arcs" aria-hidden="true"></div>
+    <div id="kill-feed" aria-hidden="true"></div>
+    <div id="compass-wrap">
+      <div id="compass-center-caret"></div>
+      <div id="compass-track"></div>
+      <div id="compass-pips"></div>
+    </div>
+
+    <div id="top-right-panel">
+      <div id="fps-chip">60 FPS</div>
+      <div id="difficulty-badge" data-diff="standard">难度：标准行动</div>
+      <div id="stealth-chip" data-state="PATROL">状态：隐匿潜行</div>
+      <div id="objective-card">
+        <div id="objective-title">切断通信中继器 (0/3)</div>
+        <div id="relay-leds">
+          <span class="relay-pip">中继器 A</span>
+          <span class="relay-pip">中继器 B</span>
+          <span class="relay-pip">中继器 C</span>
+        </div>
+        <div id="holdout-bar" hidden>
+          <div class="holdout-row">
+            <span>撤离锚链解锁倒计时</span>
+            <span id="holdout-time">30.0s</span>
+          </div>
+          <div class="holdout-track"><div id="holdout-fill"></div></div>
+        </div>
+        <div id="tut-chips" class="tut-chips"></div>
+        <div id="tut-skip-hint" class="tut-skip-hint" hidden>[Tab] 跳过引导直入实战</div>
+      </div>
+    </div>
+
+    <div id="markers-layer"></div>
+
+    <div id="scope-overlay" aria-hidden="true">
+      <svg id="scope-svg" viewBox="0 0 1000 1000">
+        <defs>
+          <filter id="scope-chevron-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <!-- 外围镜圈描边与微弱光学镀膜环 -->
+        <circle cx="500" cy="500" r="468" fill="none" stroke="rgba(72, 213, 255, 0.22)" stroke-width="2" />
+        <circle cx="500" cy="500" r="474" fill="none" stroke="rgba(12, 18, 28, 0.92)" stroke-width="10" />
+        <!-- 四向细密位线（中心 36px 完全留空不遮目标） -->
+        <g stroke="rgba(18, 28, 38, 0.88)" stroke-width="2.2">
+          <line x1="60" y1="500" x2="452" y2="500" />
+          <line x1="548" y1="500" x2="940" y2="500" />
+          <line x1="500" y1="60" x2="500" y2="456" />
+          <line x1="500" y1="538" x2="500" y2="940" />
+        </g>
+        <!-- 细亮青风偏/测距密位刻度（Mil-Dot Ticks） -->
+        <g stroke="rgba(165, 228, 255, 0.72)" stroke-width="1.6">
+          <line x1="416" y1="491" x2="416" y2="509" />
+          <line x1="364" y1="487" x2="364" y2="513" />
+          <line x1="312" y1="492" x2="312" y2="508" />
+          <line x1="584" y1="491" x2="584" y2="509" />
+          <line x1="636" y1="487" x2="636" y2="513" />
+          <line x1="688" y1="492" x2="688" y2="508" />
+          <line x1="489" y1="556" x2="511" y2="556" />
+          <line x1="485" y1="604" x2="515" y2="604" />
+          <line x1="490" y1="652" x2="510" y2="652" />
+          <line x1="492" y1="700" x2="508" y2="700" />
+        </g>
+        <!-- 中心战术微光 V 字尖端（尖峰精准指向 500,500） -->
+        <g filter="url(#scope-chevron-glow)">
+          <polyline points="484,518 500,500 516,518" fill="none" stroke="#ff5e3a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="500" cy="500" r="1.8" fill="#ffe7de" />
+        </g>
+      </svg>
+    </div>
+
+    <div id="crosshair">
+      <span class="ch-dot"></span>
+      <span class="ch-tick ch-v"></span>
+      <span class="ch-tick ch-v"></span>
+      <span class="ch-tick ch-h"></span>
+      <span class="ch-tick ch-h"></span>
+    </div>
+    <div id="hitmarker" class="hitmarker"></div>
+
+    <div id="interact-wrap">
+      <svg width="32" height="32" viewBox="0 0 60 60">
+        <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="5" />
+        <circle id="interact-ring-prog" cx="30" cy="30" r="26" fill="none" stroke="#ffaa33" stroke-width="5"
+                stroke-dasharray="163.36" stroke-dashoffset="163.36" stroke-linecap="round"
+                transform="rotate(-90 30 30)" />
+      </svg>
+      <span id="interact-label">长按 [E] 切断中继器</span>
+    </div>
+
+    <div id="perk-strip" hidden></div>
+    <div id="bottom-left">
+      <div class="hp-row">
+        <span class="hp-label">护甲生命值</span>
+        <span id="regen-tag">恢复中</span>
+        <span id="hp-text">100</span>
+      </div>
+      <div class="hp-track"><div id="hp-fill"></div></div>
+    </div>
+
+    <div id="bottom-right">
+      <div class="wpn-name" id="wpn-name">CAR-47 破晓 // 战术卡宾枪</div>
+      <div class="ammo-row">
+        <span id="ammo-cur">30</span>
+        <span class="ammo-res" id="ammo-res">/ 180</span>
+      </div>
+      <div class="wpn-subrow">
+        <span id="wpn-slot-badge" class="wpn-tag">[1] 主武器</span>
+        <span id="sup-status" class="wpn-tag sup-off">[T] 消音：卸</span>
+        <span id="grenade-status" class="wpn-tag">[G/4] EMP雷 x2</span>
+        <span id="scan-status" class="wpn-tag">[Q] 扫描就绪</span>
+      </div>
+      <div id="reload-badge">正在换弹...</div>
+      <div class="wpn-hints">
+        <span id="flash-status">枪灯：开</span>
+        <span>[Shift+C] 滑铲</span>
+        <span>[V] 处决</span>
+        <span>[R] 换弹</span>
+        <span>[F] 枪灯</span>
+      </div>
+    </div>
+
+    <div id="radio-box">
+      <div id="radio-speaker">守望者 // 频道 04</div>
+      <div id="radio-text"></div>
+    </div>
+  </div>
+
+  <dialog id="menu-dialog" aria-labelledby="dlg-title">
+    <h1 id="dlg-title">暴雨夜码头 · 战术撤离行动</h1>
+    <p id="dlg-desc">渗透至被机器军团控制的 04 号集装箱码头。任意顺序切断 3 处通信中继器，守住撤离倒计时后前往东北泊位登船撤离。</p>
+    <div id="dlg-stats" hidden></div>
+
+    <div id="menu-view-main">
+      <div id="career-best-strip" hidden></div>
+
+      <section id="difficulty-panel" aria-label="行动难度选择">
+        <fieldset class="loadout-fieldset">
+          <legend class="loadout-legend">行动难度选择 · 新手护航至硬核拟真（教学与定时靶场固定标准基准）</legend>
+          <div class="card-grid-2">
+            <label class="card diff-card" data-diff="recruit">
+              <input type="radio" name="loadout-diff" value="recruit">
+              <div class="card-head">
+                <span class="card-title">新兵护航</span>
+                <span class="card-badge badge-cyan">零基础推荐</span>
+              </div>
+              <span class="card-meta">柔和辅助瞄准 · 低后坐全回血</span>
+            </label>
+            <label class="card diff-card" data-diff="standard">
+              <input type="radio" name="loadout-diff" value="standard" checked>
+              <div class="card-head">
+                <span class="card-title">标准行动</span>
+                <span class="card-badge badge-muted">经典默认</span>
+              </div>
+              <span class="card-meta">1.0x 原版平衡 · 全系统标准基准</span>
+            </label>
+            <label class="card diff-card" data-diff="veteran">
+              <input type="radio" name="loadout-diff" value="veteran">
+              <div class="card-head">
+                <span class="card-title">老兵特遣</span>
+                <span class="card-badge badge-amber">老枪手推荐</span>
+              </div>
+              <span class="card-meta">+25% 评分 · 高压快反应 · 弱点收益↑</span>
+            </label>
+            <label class="card diff-card" data-diff="realism">
+              <input type="radio" name="loadout-diff" value="realism">
+              <div class="card-head">
+                <span class="card-title">拟真夜战</span>
+                <span class="card-badge badge-red">硬核无准星</span>
+              </div>
+              <span class="card-meta">+50% 评分 · 去准星依赖 3D 全息/倍镜</span>
+            </label>
+          </div>
+          <div id="diff-summary" class="diff-summary">
+            <span class="diff-sum-tag">标准行动</span>
+            <span>原版标准均衡数值，适合多数玩家完整体验潜行与突击节奏 · 评分 1.00x</span>
+          </div>
+        </fieldset>
+      </section>
+
+      <details id="disclosure-loadout" class="menu-disclosure">
+        <summary id="disclosure-loadout-summary">武器配装与挑战词缀（CAR-47 · 标准暗钢）</summary>
+        <div class="disclosure-body">
+          <div id="loadout-panel">
+            <fieldset class="loadout-fieldset">
+              <legend class="loadout-legend">主战武器配置 [1] · 标配 [2] 消音 USP-9</legend>
+              <div class="card-grid-3">
+                <label class="card">
+                  <input type="radio" name="loadout-weapon" value="car47" checked>
+                  <span class="card-title">CAR-47 卡宾枪</span>
+                  <span class="card-meta">全自动均衡突击 · 30发弹匣</span>
+                </label>
+                <label class="card">
+                  <input type="radio" name="loadout-weapon" value="dmr">
+                  <span class="card-title">MK-14 DMR</span>
+                  <span class="card-meta">高穿甲精确射手 · 2.3x 暴击</span>
+                </label>
+                <label class="card">
+                  <input type="radio" name="loadout-weapon" value="shotgun">
+                  <span class="card-title">M890 破门霰弹</span>
+                  <span class="card-meta">7发钢珠近战清场爆破</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="loadout-fieldset">
+              <legend class="loadout-legend">枪械战术涂装（通关/S级解锁）</legend>
+              <div class="card-grid-3">
+                <label class="card">
+                  <input type="radio" name="loadout-skin" value="standard" checked>
+                  <span class="card-title">标准暗钢</span>
+                  <span class="card-meta">制式哑光碳钢</span>
+                </label>
+                <label class="card">
+                  <input type="radio" name="loadout-skin" value="night_ops" disabled>
+                  <span class="card-title">夜幕幽灵</span>
+                  <span class="card-meta" id="skin-meta-night_ops">A/S级或零警通关解锁</span>
+                </label>
+                <label class="card">
+                  <input type="radio" name="loadout-skin" value="hazmat_blue" disabled>
+                  <span class="card-title">海军蓝 HAZMAT</span>
+                  <span class="card-meta" id="skin-meta-hazmat_blue">3次通关或S级解锁</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="loadout-fieldset" style="margin-bottom:2px;">
+              <legend class="loadout-legend">可叠加挑战词缀（额外提升 S 级评分倍率）</legend>
+              <div class="card-grid-3">
+                <label class="card">
+                  <input type="checkbox" name="loadout-mutator" value="blackout">
+                  <span class="card-title">全图停电 +20%</span>
+                  <span class="card-meta">照明熄灭，强依赖 F/Q</span>
+                </label>
+                <label class="card">
+                  <input type="checkbox" name="loadout-mutator" value="explosive_tide">
+                  <span class="card-title">高爆狂潮 +15%</span>
+                  <span class="card-meta">额外红桶 + 破片增威</span>
+                </label>
+                <label class="card">
+                  <input type="checkbox" name="loadout-mutator" value="elite_patrol">
+                  <span class="card-title">精锐巡防 +25%</span>
+                  <span class="card-meta">防爆盾与高台激光狙开局布防</span>
+                </label>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+      </details>
+
+      <details id="disclosure-settings" class="menu-disclosure">
+        <summary id="disclosure-settings-summary">操作指南与画面 / 灵敏度 / 音频设置</summary>
+        <div class="disclosure-body">
+          <div class="ctrl-brief">
+            <strong>操作指南：</strong>WASD 移动 · Shift 冲刺 · C 下蹲 · <strong>Shift+C 滑铲</strong> · 右键开镜(靠墙自动探头) · <strong>T 消音热装卸</strong> · <strong>1/2 切枪</strong> · <strong>按住 G 预瞄抛物线/松手投掷(右键取消) · 4 切投掷物</strong> · <strong>Q 扫描</strong> · <strong>V 近战/背刺</strong> · E 交互(近中继器按 G 贴 C4 强破)
+          </div>
+
+          <div class="opt-group">
+            <div class="opt-row opt-select-row">
+              <label for="opt-quality">画质预设</label>
+              <select id="opt-quality">
+                <option value="extreme">极限画质（SSR/GTAO + 动态投影 + 体积雾 + 高模 + AgX）</option>
+                <option value="high" selected>高画质（HDR泛光 + 镜头雨滴 + 水洼倒影）</option>
+                <option value="medium">中画质（优化倒影 + HDR泛光）</option>
+                <option value="low">低画质（原生直出 · 极致流畅）</option>
+              </select>
+            </div>
+            <label class="switch-row" for="opt-drs" id="opt-drs-row">
+              <span>
+                <strong>动态分辨率保护 (DRS)</strong>
+                <span class="switch-row-hint">极限画质帧率低于 55 FPS 时自动阶梯降分辨率稳住 60 FPS</span>
+              </span>
+              <input type="checkbox" id="opt-drs" role="switch" switch checked>
+            </label>
+            <div class="opt-row">
+              <label for="opt-sens">鼠标灵敏度</label>
+              <input type="range" id="opt-sens" min="0.3" max="2.5" step="0.1" value="1.0">
+              <span id="val-sens" class="opt-val">1.0x</span>
+            </div>
+            <div class="opt-row">
+              <label for="opt-vol">主音量</label>
+              <input type="range" id="opt-vol" min="0" max="1" step="0.05" value="0.72">
+              <span id="val-vol" class="opt-val">72%</span>
+            </div>
+            <div class="opt-row">
+              <label for="opt-voice-vol">中文语音</label>
+              <input type="range" id="opt-voice-vol" min="0" max="1" step="0.05" value="0.85">
+              <span id="val-voice-vol" class="opt-val">85%</span>
+            </div>
+            <div class="opt-row opt-select-row">
+              <label for="opt-voice-mode">电台音色</label>
+              <select id="opt-voice-mode">
+                <option value="radio" selected>战术对讲机滤波（推荐）</option>
+                <option value="clean">清晰原声直出</option>
+                <option value="off">关闭中文语音</option>
+              </select>
+            </div>
+            <label class="switch-row" for="opt-toggle-ads">
+              <span>
+                <strong>切换开镜 (Toggle ADS)</strong>
+                <span class="switch-row-hint">右键单击切换瞄准状态，再按右键或冲刺时自动退出</span>
+              </span>
+              <input type="checkbox" id="opt-toggle-ads" role="switch" switch>
+            </label>
+            <label class="switch-row" for="opt-invert-y">
+              <span>
+                <strong>反转垂直视角 (Invert Y)</strong>
+                <span class="switch-row-hint">鼠标上移低头、下移抬头</span>
+              </span>
+              <input type="checkbox" id="opt-invert-y" role="switch" switch>
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <div class="dlg-actions">
+        <button type="button" id="btn-start" class="dlg-btn dlg-btn-primary" autofocus>开始新手教程（推荐）</button>
+        <button type="button" id="btn-secondary" class="dlg-btn dlg-btn-secondary">直接实战部署</button>
+      </div>
+      <div id="dlg-sub-actions" class="dlg-sub-actions">
+        <button type="button" id="btn-open-training" class="dlg-btn dlg-btn-training">训练模式 · 限时 / 无尽 / 关卡练习</button>
+        <button type="button" id="btn-return-main" class="dlg-btn dlg-btn-secondary" hidden>返回主菜单</button>
+      </div>
+    </div>
+
+    <div id="menu-view-training" hidden>
+      <div id="train-tablist" class="train-tablist" role="tablist" aria-label="训练子模式">
+        <button type="button" id="tab-timed" class="train-tab" role="tab" aria-selected="true" tabindex="0" data-submode="timed">限时模式</button>
+        <button type="button" id="tab-endless" class="train-tab" role="tab" aria-selected="false" tabindex="-1" data-submode="endless">无尽模式</button>
+        <button type="button" id="tab-stage" class="train-tab" role="tab" aria-selected="false" tabindex="-1" data-submode="stage">关卡练习</button>
+      </div>
+
+      <div id="train-tabpanel" class="train-panel" role="tabpanel" aria-labelledby="tab-timed" tabindex="0">
+        <div id="train-best-strip" class="train-best-strip"></div>
+
+        <div id="train-pane-timed" class="train-subpane">
+          <p class="train-panel-desc">安全靶场冲刺（无敌不受伤）。倒计时内快速击毁南侧中庭多距离移动靶机，精准命中红色核心触发 1 枪秒杀暴击并叠加连击倍率。</p>
+          <div class="train-pills" role="group" aria-label="限时模式倒计时长">
+            <button type="button" class="train-pill" data-duration="30" aria-pressed="false">30 秒冲刺</button>
+            <button type="button" class="train-pill" data-duration="60" aria-pressed="true">60 秒标准</button>
+            <button type="button" class="train-pill" data-duration="90" aria-pressed="false">90 秒耐力</button>
+          </div>
+        </div>
+
+        <div id="train-pane-endless" class="train-subpane" hidden>
+          <p class="train-panel-desc">真实战斗波次生存（第 2 波起出现警戒机兵、防爆重装与高台激光狙击手）。每波肃清触发三选一战术空投增益，并按波次补充弹药与回复护甲！</p>
+        </div>
+
+        <div id="train-pane-stage" class="train-subpane" hidden>
+          <p class="train-panel-desc">自由任选 04 号码头 6 大战术战区（含潜行消音摸哨与重装破盾反狙专项演练）展开实战练习。</p>
+          <div id="train-stage-grid" class="stage-grid" role="group" aria-label="选择练习关卡"></div>
+          <label class="switch-row" for="opt-train-invuln">
+            <span>
+              <strong>无伤练路线（防阵亡）</strong>
+              <span class="switch-row-hint">开启后保留受击方向提醒但不会阵亡；仅记“演练通关”，不刷正式最快用时</span>
+            </span>
+            <input type="checkbox" id="opt-train-invuln" role="switch" switch>
+          </label>
+        </div>
+      </div>
+
+      <div class="dlg-actions">
+        <button type="button" id="btn-train-back" class="dlg-btn dlg-btn-secondary">← 返回</button>
+        <button type="button" id="btn-train-start" class="dlg-btn dlg-btn-primary" data-mode="training">开始训练（锁定视角）</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="airdrop-dialog" aria-labelledby="airdrop-title">
+    <h2 id="airdrop-title" style="margin:0 0 6px;font-size:20px;color:#fff;">战术空投补给 // 选择一项波间强化</h2>
+    <p id="airdrop-desc" style="margin:0 0 10px;font-size:13px;color:#adc3dd;">护甲与弹药已同步补给。请立刻选取空投模块继续迎战下一波机械集群：</p>
+    <form id="airdrop-form" method="dialog">
+      <div id="airdrop-options"></div>
+    </form>
+  </dialog>
+
+  <div id="gfx-warmup-banner" popover="manual" role="status" aria-live="polite">
+    <div class="warmup-head">
+      <span class="warmup-dot" aria-hidden="true"></span>
+      <span id="warmup-title">正在后台异步预编译极限画质管线...</span>
+      <span id="warmup-pct">0%</span>
+    </div>
+    <div class="warmup-track"><div id="warmup-fill"></div></div>
+  </div>
+
+  <script src="src/three.bundle.js"></script>
+  <script src="voices/voice_pack.js"></script>
+  <script src="src/tex.js"></script>
+  <script src="src/extreme_gfx.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/voice_logic.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/level.js"></script>
+  <script src="src/weapon.js"></script>
+  <script src="src/enemy.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>

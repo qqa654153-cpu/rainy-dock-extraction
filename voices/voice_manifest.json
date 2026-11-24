@@ -1,0 +1,431 @@
+{
+  "version": 1,
+  "roles": {
+    "instructor": {
+      "speakerLabel": "教官",
+      "edgeVoice": "zh-CN-YunjianNeural",
+      "rate": "+6%",
+      "pitch": "-4Hz",
+      "speechPitch": 0.9,
+      "speechRate": 1.05
+    },
+    "watcher": {
+      "speakerLabel": "守望者 // 频道 04",
+      "edgeVoice": "zh-CN-XiaoxiaoNeural",
+      "rate": "+4%",
+      "pitch": "+0Hz",
+      "speechPitch": 1.04,
+      "speechRate": 1.05
+    },
+    "evac": {
+      "speakerLabel": "撤离一号 // EVAC-01",
+      "edgeVoice": "zh-CN-YunxiNeural",
+      "rate": "+10%",
+      "pitch": "-2Hz",
+      "speechPitch": 0.95,
+      "speechRate": 1.1
+    }
+  },
+  "clips": [
+    {
+      "id": "tut_1",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "欢迎来到 04 号码头。先热身基础机动：WASD 移动、按住 Shift 冲刺、冲刺中按 C 滑铲、按 C 下蹲利用掩体，并按 F 切换战术枪灯。",
+      "ttsText": "欢迎来到零四号码头。先热身基础机动：W A S D 移动、按住 Shift 冲刺、冲刺中按 C 滑铲、按 C 下蹲利用掩体，并按 F 切换战术枪灯。"
+    },
+    {
+      "id": "tut_2",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "机动良好！按住鼠标右键使用当前瞄具开镜（ADS）并点射 3 发，然后按 [1]/[2] 切换副手枪，再按 [T] 体验现场装卸消音器。",
+      "ttsText": "机动良好！按住鼠标右键使用当前瞄具开镜观察视野并点射三发，然后按一二键切换主副武器，再按 T 键体验现场装卸消音器。"
+    },
+    {
+      "id": "tut_3",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "前方 13 米已投放训练靶机！瞄准正中红色光学核心打出 2 倍金色暴击将其击毁，随后按 [R] 将当前弹匣补满。",
+      "ttsText": "前方十三米已投放训练靶机！瞄准正中红色光学核心打出两倍金色暴击将其击毁，随后按 R 键将当前弹匣补满。"
+    },
+    {
+      "id": "tut_4",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "潜行暗杀演练：按 [Q] 触发战术脉冲扫描标记前方背对你的警戒单位，绕到它身后靠近按 [V] 执行无声处决（免疫普通子弹）！",
+      "ttsText": "潜行暗杀演练：按 Q 键触发战术脉冲扫描标记前方背对你的警戒单位，绕到它身后靠近按 V 键执行无声近战处决。"
+    },
+    {
+      "id": "tut_5",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "防爆盾靶出现！按 [4] 切换投掷道具确认选定 EMP 雷，按 [G] 投出瘫痪护盾后开火击杀！（身旁蓝光补给箱可随时按 [E] 无限补雷）",
+      "ttsText": "防爆盾靶出现！按四键切换投掷道具选定 E M P 电磁雷，按 G 键投出瘫痪护盾后开火击杀！身旁蓝光补给箱可随时按 E 键补雷。"
+    },
+    {
+      "id": "tut_6",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "善用集装箱制高点与自动探头！沿西侧青色光柱金属斜坡登上集装箱高台（贴箱边按右键开镜即可自动侧身探头）。",
+      "ttsText": "善用集装箱制高点与自动探头！沿西侧青色光柱金属斜坡登上集装箱高台，贴近箱边按右键开镜即可自动侧身探头。"
+    },
+    {
+      "id": "tut_7_out",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "高台视野极佳！现在向西北铁皮仓库（青色光柱入口）移动，进屋体会暴雨隔绝声学并使用演练医疗箱。",
+      "ttsText": "高台视野极佳！现在向西北铁皮仓库移动，进屋体会暴雨隔绝声学变化，并使用室内演练医疗箱。"
+    },
+    {
+      "id": "tut_7_in",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "已进入铁皮仓库！听：雨声瞬变低通闷响且地面干燥。靠近绿色演练医疗箱按 [E] 回满生命值！",
+      "ttsText": "已进入铁皮仓库！听，雨声瞬变低通闷响且地面干燥。靠近绿色演练医疗箱按 E 键回满生命值！"
+    },
+    {
+      "id": "tut_8",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "最终演练：走出南门找到模拟中继器。你可以长按 [E] 无声黑入（不惊动敌人），或按 [G] 贴 C4 强爆摧毁，任选其一即可结业！",
+      "ttsText": "最终演练：走出南门找到模拟中继器。你可以长按 E 键无声黑入，或按 G 键贴装 C4 强爆摧毁，任选其一即可结业！"
+    },
+    {
+      "id": "tut_complete",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "全部 8 项战术演练达标！2 秒后将在南侧泊位满状态重置，正式开启「0/3 中继器切断」实战撤离任务！",
+      "ttsText": "全部八项战术演练达标！两秒后将在南侧泊位满状态重置，正式开启三处中继器切断实战撤离任务！"
+    },
+    {
+      "id": "mission_start",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "风暴已掩护你渗入 04 号码头。按任意顺序靠近 3 处通信中继器并长按 E 切断信号！",
+      "ttsText": "风暴已掩护你渗入零四号码头。按任意顺序靠近三处通信中继器，并长按 E 键切断信号！"
+    },
+    {
+      "id": "mission_skip",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "已跳过新手引导，直接切入 04 号码头实战！按任意顺序切断 3 处通信中继器！",
+      "ttsText": "已跳过新手引导，直接切入零四号码头实战！按任意顺序切断三处通信中继器！"
+    },
+    {
+      "id": "mission_restart",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "已重新部署至南侧防波堤。切断全部 3 处中继器后向东北码头撤离！",
+      "ttsText": "已重新部署至南侧防波堤。切断全部三处中继器后向东北码头撤离！"
+    },
+    {
+      "id": "relay_A_1",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继器 A（西侧集装箱区）已切断 (1/3)！敌方警戒警报已触发，注意拦截无人机与机械犬！",
+      "ttsText": "中继器 A，西侧集装箱区已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！"
+    },
+    {
+      "id": "relay_A_2",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继器 A（西侧集装箱区）已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！",
+      "ttsText": "中继器 A，西侧集装箱区已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！"
+    },
+    {
+      "id": "relay_B_1",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继器 B（铁皮仓库内部）已切断 (1/3)！敌方警戒警报已触发，注意拦截无人机与机械犬！",
+      "ttsText": "中继器 B，铁皮仓库内部已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！"
+    },
+    {
+      "id": "relay_B_2",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继器 B（铁皮仓库内部）已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！",
+      "ttsText": "中继器 B，铁皮仓库内部已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！"
+    },
+    {
+      "id": "relay_C_1",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继器 C（龙门吊控制台）已切断 (1/3)！敌方警戒警报已触发，注意拦截无人机与机械犬！",
+      "ttsText": "中继器 C，龙门吊控制台已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！"
+    },
+    {
+      "id": "relay_C_2",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继器 C（龙门吊控制台）已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！",
+      "ttsText": "中继器 C，龙门吊控制台已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！"
+    },
+    {
+      "id": "evac_unlocked",
+      "role": "evac",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "全部中继器已离线！码头进入全面封锁，大批机器增援已出动——全速突破并前往东北泊位绿色信号处登船！",
+      "ttsText": "全部中继器已离线！码头进入全面封锁，大批机器增援已出动，全速突破并前往东北泊位绿色信号处登船！"
+    },
+    {
+      "id": "tac_low_hp",
+      "role": "watcher",
+      "priority": 2,
+      "cooldownSec": 16,
+      "displayText": "警告：护甲生命值严重受损！立即寻找掩体或使用医疗箱！",
+      "ttsText": "警告，护甲生命值严重受损！立即寻找掩体或使用医疗箱！"
+    },
+    {
+      "id": "tac_ammo_empty",
+      "role": "watcher",
+      "priority": 1,
+      "cooldownSec": 8,
+      "displayText": "弹匣打空，正在紧急换弹！",
+      "ttsText": "弹匣打空，正在紧急换弹！"
+    },
+    {
+      "id": "tac_medkit",
+      "role": "watcher",
+      "priority": 1,
+      "cooldownSec": 10,
+      "displayText": "应急医疗箱已注入，生命体征回升。",
+      "ttsText": "应急医疗箱已注入，生命体征回升。"
+    },
+    {
+      "id": "tac_barrel_kill",
+      "role": "watcher",
+      "priority": 1,
+      "cooldownSec": 10,
+      "displayText": "危化油桶已引爆，周边机械单位遭重创！",
+      "ttsText": "危化油桶已引爆，周边机械单位遭重创！"
+    },
+    {
+      "id": "tac_evac_approach",
+      "role": "evac",
+      "priority": 2,
+      "cooldownSec": 60,
+      "displayText": "已锁定你的位置！撤离快艇就在东北栈桥泊位，冲刺登船！",
+      "ttsText": "已锁定你的位置！撤离快艇就在东北栈桥泊位，冲刺登船！"
+    },
+    {
+      "id": "tac_evac_boarding",
+      "role": "evac",
+      "priority": 2,
+      "cooldownSec": 30,
+      "displayText": "撤离锚链解锁中，掩护好自己，马上起航！",
+      "ttsText": "撤离锚链解锁中，掩护好自己，马上起航！"
+    },
+    {
+      "id": "mission_victory",
+      "role": "evac",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "全员登船确认！撤离快艇正在驶离 04 号码头，行动圆满成功！",
+      "ttsText": "全员登船确认！撤离快艇正在驶离零四号码头，行动圆满成功！"
+    },
+    {
+      "id": "mission_defeat",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "失去特遣队员生命信号，04 号码头撤离行动中止。",
+      "ttsText": "失去特遣队员生命信号，零四号码头撤离行动中止。"
+    },
+    {
+      "id": "train_timed_start",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "限时打靶冲刺开始！瞄准靶机红色核心触发暴击，连续击毁叠加连击倍率！",
+      "ttsText": "限时打靶冲刺开始！瞄准靶机红色核心触发暴击，连续击毁叠加连击倍率！"
+    },
+    {
+      "id": "train_timed_end",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "时间到！本次打靶计时结束，请查看射击评分与暴击统计。",
+      "ttsText": "时间到！本次打靶计时结束，请查看射击评分与暴击统计。"
+    },
+    {
+      "id": "train_endless_start",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "无尽波次防线已启动！敌方机械集群正在逼近，清完每波可获得短暂整备回血！",
+      "ttsText": "无尽波次防线已启动！敌方机械集群正在逼近，清完每波可获得短暂整备回血！"
+    },
+    {
+      "id": "train_endless_wave",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "警戒！新一波机械增援已进入码头防区，利用掩体与危化油桶迎敌！",
+      "ttsText": "警戒！新一波机械增援已进入码头防区，利用掩体与危化油桶迎敌！"
+    },
+    {
+      "id": "train_stage_1",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡一：西区集装箱攻防。利用斜坡抢占高台，消灭敌军并切断 A 号中继器！",
+      "ttsText": "关卡一，西区集装箱攻防。利用斜坡抢占高台，消灭敌军并切断 A 号中继器！"
+    },
+    {
+      "id": "train_stage_2",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡二：铁皮仓库室内近战。小心机械犬近距突袭，肃清仓库并切断 B 号中继器！",
+      "ttsText": "关卡二，铁皮仓库室内近战。小心机械犬近距突袭，肃清仓库并切断 B 号中继器！"
+    },
+    {
+      "id": "train_stage_3",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡三：东侧龙门吊制高点。善用危险油桶连锁爆破，肃清敌军并切断 C 号中继器！",
+      "ttsText": "关卡三，东侧龙门吊制高点。善用危险油桶连锁爆破，肃清敌军并切断 C 号中继器！"
+    },
+    {
+      "id": "train_stage_4",
+      "role": "evac",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡四：终局全面封锁突围！全速冲破机器防线，前往东北泊位长按 E 登船撤离！",
+      "ttsText": "关卡四，终局全面封锁突围！全速冲破机器防线，前往东北泊位长按 E 键登船撤离！"
+    },
+    {
+      "id": "train_stage_clear",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡练习达标！区域目标已全部肃清，表现干脆利落！",
+      "ttsText": "关卡练习达标！区域目标已全部肃清，表现干脆利落！"
+    },
+    {
+      "id": "relay_stealth_clean",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "中继节点已无声黑入！敌方巡防网尚未察觉，继续保持幽灵渗入节奏。",
+      "ttsText": "中继节点已无声黑入！敌方巡防网尚未察觉，继续保持幽灵渗入节奏。"
+    },
+    {
+      "id": "relay_c4_loud",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "高爆破拆已瞬间摧毁中继核心！巨响已惊动码头防区，准备迎击追猎小队！",
+      "ttsText": "高爆破拆已瞬间摧毁中继核心！巨响已惊动码头防区，准备迎击追猎小队！"
+    },
+    {
+      "id": "alarm_compromised",
+      "role": "watcher",
+      "priority": 2,
+      "cooldownSec": 18,
+      "displayText": "警告：敌方侦察单位已发出警报信号，周边增援小队正在合围！",
+      "ttsText": "警告，敌方侦察单位已发出警报信号，周边增援小队正在合围！"
+    },
+    {
+      "id": "enemy_shield_warn",
+      "role": "watcher",
+      "priority": 2,
+      "cooldownSec": 24,
+      "displayText": "发现防爆盾重装机兵！正面装甲弹反常规子弹，建议侧翼绕后、投掷 EMP 破盾或炸桶！",
+      "ttsText": "发现防爆盾重装机兵！正面装甲弹反常规子弹，建议侧翼绕后、投掷 E M P 破盾或炸桶！"
+    },
+    {
+      "id": "enemy_laser_warn",
+      "role": "watcher",
+      "priority": 2,
+      "cooldownSec": 20,
+      "displayText": "小心高处红线激光锁定！高台狙击无人机正在蓄能，立即滑铲进掩体或反狙击！",
+      "ttsText": "小心高处红线激光锁定！高台狙击无人机正在蓄能，立即滑铲进掩体或反狙击！"
+    },
+    {
+      "id": "evac_holdout_start",
+      "role": "evac",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "全部中继器已离线！我艇正在全速抵近东北栈桥，守住泊位 30 秒直到接应泊靠！",
+      "ttsText": "全部中继器已离线！我艇正在全速抵近东北栈桥，守住泊位三十秒直到接应泊靠！"
+    },
+    {
+      "id": "evac_holdout_15s",
+      "role": "evac",
+      "priority": 2,
+      "cooldownSec": 30,
+      "displayText": "还剩 15 秒抵达接应泊位！压制东北方向来敌，守住栈桥入口！",
+      "ttsText": "还剩十五秒抵达接应泊位！压制东北方向来敌，守住栈桥入口！"
+    },
+    {
+      "id": "ammo_crate_resupply",
+      "role": "watcher",
+      "priority": 1,
+      "cooldownSec": 10,
+      "displayText": "码头战术弹药箱已开启，主副武器备弹与战术投掷物已补充。",
+      "ttsText": "码头战术弹药箱已开启，主副武器备弹与战术投掷物已补充。"
+    },
+    {
+      "id": "ammo_low_reserve",
+      "role": "watcher",
+      "priority": 2,
+      "cooldownSec": 16,
+      "displayText": "警告：备弹存量告急！请切换副手枪或寻找码头周边绿色战术弹药箱。",
+      "ttsText": "警告，备弹存量告急！请切换副手枪或寻找码头周边绿色战术弹药箱。"
+    },
+    {
+      "id": "endless_airdrop_ready",
+      "role": "watcher",
+      "priority": 3,
+      "cooldownSec": 8,
+      "displayText": "波次间隙整备开启！空投战术模块已投放，选择一项强化继续迎敌！",
+      "ttsText": "波次间隙整备开启！空投战术模块已投放，选择一项强化继续迎敌！"
+    },
+    {
+      "id": "mission_rank_s",
+      "role": "evac",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "全员安全登船！指挥部授予本次行动最高 S 级特战评价，干得太漂亮了！",
+      "ttsText": "全员安全登船！指挥部授予本次行动最高 S 级特战评价，干得太漂亮了！"
+    },
+    {
+      "id": "train_stage_5",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡五：潜行暗杀与发报打断演练。利用 T 键消音器、V 键背后处决与诱饵器无声切断中继器！",
+      "ttsText": "关卡五，潜行暗杀与发报打断演练。利用 T 键消音器、V 键背后处决与诱饵器无声切断中继器！"
+    },
+    {
+      "id": "train_stage_6",
+      "role": "instructor",
+      "priority": 3,
+      "cooldownSec": 0,
+      "displayText": "关卡六：重装破盾与反狙击演练。用 G 键 EMP 瘫痪防爆盾兵，利用滑铲躲避激光狙击并肃清战区！",
+      "ttsText": "关卡六，重装破盾与反狙击演练。用 G 键 E M P 瘫痪防爆盾兵，利用滑铲躲避激光狙击并肃清战区！"
+    }
+  ]
+}
