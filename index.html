@@ -210,7 +210,7 @@
       justify-content: flex-end;
       gap: 5px;
       margin-top: 6px;
-      max-width: 310px;
+      max-width: 360px;
     }
     .tut-chips.active { display: flex; }
 
@@ -493,7 +493,8 @@
 
     .wpn-hints {
       display: flex;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 4px 10px;
       justify-content: flex-end;
       margin-top: 4px;
       font-size: 11px;
@@ -524,7 +525,7 @@
       transition: opacity 0.22s ease, transform 0.22s ease;
     }
 
-    @media (max-width: 1120px) {
+    @media (max-width: 1180px) {
       #radio-box {
         bottom: 108px;
         width: min(500px, calc(100vw - 48px));
@@ -623,7 +624,7 @@
       border-radius: 8px;
       background: rgba(10, 16, 28, 0.94);
       color: #edf4ff;
-      width: min(570px, 94vw);
+      width: min(620px, 95vw);
       max-height: 92dvh;
       overflow-y: auto;
       padding: 18px 22px;
@@ -641,11 +642,57 @@
       backdrop-filter: blur(6px);
     }
 
+    .dlg-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
     #dlg-title {
-      margin: 0 0 8px;
+      margin: 0;
+      flex: 1;
+      min-width: 0;
       font-size: 22px;
       letter-spacing: 0.04em;
       color: #ffffff;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      flex-shrink: 0;
+      padding: 2px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(130, 175, 225, 0.3);
+      gap: 2px;
+    }
+
+    .lang-btn {
+      padding: 4px 10px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #9ab5d4;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: background 0.14s ease, color 0.14s ease;
+    }
+    .lang-btn:hover {
+      color: #eef5ff;
+      background: rgba(72, 213, 255, 0.1);
+    }
+    .lang-btn[aria-pressed="true"] {
+      background: rgba(72, 213, 255, 0.22);
+      color: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(72, 213, 255, 0.55);
+    }
+    .lang-btn:focus-visible {
+      outline: 2px solid var(--brand-cyan);
+      outline-offset: 2px;
     }
 
     #dlg-desc {
@@ -694,7 +741,7 @@
 
     .opt-row {
       display: grid;
-      grid-template-columns: 96px 1fr 48px;
+      grid-template-columns: minmax(108px, 146px) 1fr 48px;
       align-items: center;
       gap: 12px;
       font-size: 13px;
@@ -702,7 +749,7 @@
     }
 
     .opt-row.opt-select-row {
-      grid-template-columns: 96px 1fr;
+      grid-template-columns: minmax(108px, 146px) 1fr;
     }
 
     select {
@@ -1605,7 +1652,7 @@
   </style>
 </head>
 <body>
-  <canvas id="game-canvas" aria-label="暴雨夜集装箱码头三维射击画布"></canvas>
+  <canvas id="game-canvas" data-i18n-aria="canvas.aria" aria-label="暴雨夜集装箱码头三维射击画布"></canvas>
   <div id="damage-vignette" aria-hidden="true"></div>
 
   <div id="hud" aria-hidden="true">
@@ -1619,24 +1666,24 @@
 
     <div id="top-right-panel">
       <div id="fps-chip">60 FPS</div>
-      <div id="difficulty-badge" data-diff="standard">难度：标准行动</div>
-      <div id="stealth-chip" data-state="PATROL">状态：隐匿潜行</div>
+      <div id="difficulty-badge" data-diff="standard" data-i18n="hud.diffDefault">难度：标准行动</div>
+      <div id="stealth-chip" data-state="PATROL" data-i18n="hud.stealthDefault">状态：隐匿潜行</div>
       <div id="objective-card">
-        <div id="objective-title">切断通信中继器 (0/3)</div>
+        <div id="objective-title" data-i18n="hud.objDefault">切断通信中继器 (0/3)</div>
         <div id="relay-leds">
-          <span class="relay-pip">中继器 A</span>
-          <span class="relay-pip">中继器 B</span>
-          <span class="relay-pip">中继器 C</span>
+          <span class="relay-pip" data-i18n="hud.relayA">中继器 A</span>
+          <span class="relay-pip" data-i18n="hud.relayB">中继器 B</span>
+          <span class="relay-pip" data-i18n="hud.relayC">中继器 C</span>
         </div>
         <div id="holdout-bar" hidden>
           <div class="holdout-row">
-            <span>撤离锚链解锁倒计时</span>
+            <span data-i18n="hud.holdoutLabel">撤离锚链解锁倒计时</span>
             <span id="holdout-time">30.0s</span>
           </div>
           <div class="holdout-track"><div id="holdout-fill"></div></div>
         </div>
         <div id="tut-chips" class="tut-chips"></div>
-        <div id="tut-skip-hint" class="tut-skip-hint" hidden>[Tab] 跳过引导直入实战</div>
+        <div id="tut-skip-hint" class="tut-skip-hint" hidden data-i18n="hud.tutSkipHint">[Tab] 跳过引导直入实战</div>
       </div>
     </div>
 
@@ -1700,162 +1747,168 @@
                 stroke-dasharray="163.36" stroke-dashoffset="163.36" stroke-linecap="round"
                 transform="rotate(-90 30 30)" />
       </svg>
-      <span id="interact-label">长按 [E] 切断中继器</span>
+      <span id="interact-label" data-i18n="hud.interactDefault">长按 [E] 切断中继器</span>
     </div>
 
     <div id="perk-strip" hidden></div>
     <div id="bottom-left">
       <div class="hp-row">
-        <span class="hp-label">护甲生命值</span>
-        <span id="regen-tag">恢复中</span>
+        <span class="hp-label" data-i18n="hud.armorLabel">护甲生命值</span>
+        <span id="regen-tag" data-i18n="hud.regenTag">恢复中</span>
         <span id="hp-text">100</span>
       </div>
       <div class="hp-track"><div id="hp-fill"></div></div>
     </div>
 
     <div id="bottom-right">
-      <div class="wpn-name" id="wpn-name">CAR-47 破晓 // 战术卡宾枪</div>
+      <div class="wpn-name" id="wpn-name" data-i18n="hud.wpnDefault">CAR-47 破晓 // 战术卡宾枪</div>
       <div class="ammo-row">
         <span id="ammo-cur">30</span>
         <span class="ammo-res" id="ammo-res">/ 180</span>
       </div>
       <div class="wpn-subrow">
-        <span id="wpn-slot-badge" class="wpn-tag">[1] 主武器</span>
-        <span id="sup-status" class="wpn-tag sup-off">[T] 消音：卸</span>
-        <span id="grenade-status" class="wpn-tag">[G/4] EMP雷 x2</span>
-        <span id="scan-status" class="wpn-tag">[Q] 扫描就绪</span>
+        <span id="wpn-slot-badge" class="wpn-tag" data-i18n="hud.slotPrimary">[1] 主武器</span>
+        <span id="sup-status" class="wpn-tag sup-off" data-i18n="hud.supOff">[T] 消音：卸</span>
+        <span id="grenade-status" class="wpn-tag" data-i18n="hud.grenadeDefault">[G/4] EMP雷 x2</span>
+        <span id="scan-status" class="wpn-tag" data-i18n="hud.scanReady">[Q] 扫描就绪</span>
       </div>
-      <div id="reload-badge">正在换弹...</div>
+      <div id="reload-badge" data-i18n="hud.reloading">正在换弹...</div>
       <div class="wpn-hints">
-        <span id="flash-status">枪灯：开</span>
-        <span>[Shift+C] 滑铲</span>
-        <span>[V] 处决</span>
-        <span>[R] 换弹</span>
-        <span>[F] 枪灯</span>
+        <span id="flash-status" data-i18n="hud.flashOn">枪灯：开</span>
+        <span data-i18n="hud.hintSlide">[Shift+C] 滑铲</span>
+        <span data-i18n="hud.hintMelee">[V] 处决</span>
+        <span data-i18n="hud.hintReload">[R] 换弹</span>
+        <span data-i18n="hud.hintLight">[F] 枪灯</span>
       </div>
     </div>
 
     <div id="radio-box">
-      <div id="radio-speaker">守望者 // 频道 04</div>
+      <div id="radio-speaker" data-i18n="radio.watcher">守望者 // 频道 04</div>
       <div id="radio-text"></div>
     </div>
   </div>
 
   <dialog id="menu-dialog" aria-labelledby="dlg-title">
-    <h1 id="dlg-title">暴雨夜码头 · 战术撤离行动</h1>
-    <p id="dlg-desc">渗透至被机器军团控制的 04 号集装箱码头。任意顺序切断 3 处通信中继器，守住撤离倒计时后前往东北泊位登船撤离。</p>
+    <div class="dlg-header-row">
+      <h1 id="dlg-title" data-i18n="app.title">暴雨夜码头 · 战术撤离行动</h1>
+      <div id="lang-switch" class="lang-switch" role="group" data-i18n-aria="aria.langSwitch" aria-label="界面语言">
+        <button type="button" class="lang-btn" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+    <p id="dlg-desc" data-i18n="menu.desc">渗透至被机器军团控制的 04 号集装箱码头。任意顺序切断 3 处通信中继器，守住撤离倒计时后前往东北泊位登船撤离。</p>
     <div id="dlg-stats" hidden></div>
 
     <div id="menu-view-main">
       <div id="career-best-strip" hidden></div>
 
-      <section id="difficulty-panel" aria-label="行动难度选择">
+      <section id="difficulty-panel" data-i18n-aria="menu.diffAria" aria-label="行动难度选择">
         <fieldset class="loadout-fieldset">
-          <legend class="loadout-legend">行动难度选择 · 新手护航至硬核拟真（教学与定时靶场固定标准基准）</legend>
+          <legend class="loadout-legend" data-i18n="menu.diffLegend">行动难度选择 · 新手护航至硬核拟真（教学与定时靶场固定标准基准）</legend>
           <div class="card-grid-2">
             <label class="card diff-card" data-diff="recruit">
               <input type="radio" name="loadout-diff" value="recruit">
               <div class="card-head">
-                <span class="card-title">新兵护航</span>
-                <span class="card-badge badge-cyan">零基础推荐</span>
+                <span class="card-title" data-i18n="diff.recruit.title">新兵护航</span>
+                <span class="card-badge badge-cyan" data-i18n="diff.recruit.badge">零基础推荐</span>
               </div>
-              <span class="card-meta">柔和辅助瞄准 · 低后坐全回血</span>
+              <span class="card-meta" data-i18n="diff.recruit.meta">柔和辅助瞄准 · 低后坐全回血</span>
             </label>
             <label class="card diff-card" data-diff="standard">
               <input type="radio" name="loadout-diff" value="standard" checked>
               <div class="card-head">
-                <span class="card-title">标准行动</span>
-                <span class="card-badge badge-muted">经典默认</span>
+                <span class="card-title" data-i18n="diff.standard.title">标准行动</span>
+                <span class="card-badge badge-muted" data-i18n="diff.standard.badge">经典默认</span>
               </div>
-              <span class="card-meta">1.0x 原版平衡 · 全系统标准基准</span>
+              <span class="card-meta" data-i18n="diff.standard.meta">1.0x 原版平衡 · 全系统标准基准</span>
             </label>
             <label class="card diff-card" data-diff="veteran">
               <input type="radio" name="loadout-diff" value="veteran">
               <div class="card-head">
-                <span class="card-title">老兵特遣</span>
-                <span class="card-badge badge-amber">老枪手推荐</span>
+                <span class="card-title" data-i18n="diff.veteran.title">老兵特遣</span>
+                <span class="card-badge badge-amber" data-i18n="diff.veteran.badge">老枪手推荐</span>
               </div>
-              <span class="card-meta">+25% 评分 · 高压快反应 · 弱点收益↑</span>
+              <span class="card-meta" data-i18n="diff.veteran.meta">+25% 评分 · 高压快反应 · 弱点收益↑</span>
             </label>
             <label class="card diff-card" data-diff="realism">
               <input type="radio" name="loadout-diff" value="realism">
               <div class="card-head">
-                <span class="card-title">拟真夜战</span>
-                <span class="card-badge badge-red">硬核无准星</span>
+                <span class="card-title" data-i18n="diff.realism.title">拟真夜战</span>
+                <span class="card-badge badge-red" data-i18n="diff.realism.badge">硬核无准星</span>
               </div>
-              <span class="card-meta">+50% 评分 · 去准星依赖 3D 全息/倍镜</span>
+              <span class="card-meta" data-i18n="diff.realism.meta">+50% 评分 · 去准星依赖 3D 全息/倍镜</span>
             </label>
           </div>
           <div id="diff-summary" class="diff-summary">
-            <span class="diff-sum-tag">标准行动</span>
-            <span>原版标准均衡数值，适合多数玩家完整体验潜行与突击节奏 · 评分 1.00x</span>
+            <span class="diff-sum-tag" data-i18n="diff.standard.title">标准行动</span>
+            <span data-i18n="diff.standard.summary">原版标准均衡数值，适合多数玩家完整体验潜行与突击节奏 · 评分 1.00x</span>
           </div>
         </fieldset>
       </section>
 
       <details id="disclosure-loadout" class="menu-disclosure">
-        <summary id="disclosure-loadout-summary">武器配装与挑战词缀（CAR-47 · 标准暗钢）</summary>
+        <summary id="disclosure-loadout-summary" data-i18n="menu.loadoutSummaryDefault">武器配装与挑战词缀（CAR-47 · 标准暗钢）</summary>
         <div class="disclosure-body">
           <div id="loadout-panel">
             <fieldset class="loadout-fieldset">
-              <legend class="loadout-legend">主战武器配置 [1] · 标配 [2] 消音 USP-9</legend>
+              <legend class="loadout-legend" data-i18n="menu.weaponLegend">主战武器配置 [1] · 标配 [2] 消音 USP-9</legend>
               <div class="card-grid-3">
                 <label class="card">
                   <input type="radio" name="loadout-weapon" value="car47" checked>
-                  <span class="card-title">CAR-47 卡宾枪</span>
-                  <span class="card-meta">全自动均衡突击 · 30发弹匣</span>
+                  <span class="card-title" data-i18n="weapon.car47.cardTitle">CAR-47 卡宾枪</span>
+                  <span class="card-meta" data-i18n="weapon.car47.cardMeta">全自动均衡突击 · 30发弹匣</span>
                 </label>
                 <label class="card">
                   <input type="radio" name="loadout-weapon" value="dmr">
-                  <span class="card-title">MK-14 DMR</span>
-                  <span class="card-meta">高穿甲精确射手 · 2.3x 暴击</span>
+                  <span class="card-title" data-i18n="weapon.dmr.cardTitle">MK-14 DMR</span>
+                  <span class="card-meta" data-i18n="weapon.dmr.cardMeta">高穿甲精确射手 · 2.3x 暴击</span>
                 </label>
                 <label class="card">
                   <input type="radio" name="loadout-weapon" value="shotgun">
-                  <span class="card-title">M890 破门霰弹</span>
-                  <span class="card-meta">7发钢珠近战清场爆破</span>
+                  <span class="card-title" data-i18n="weapon.shotgun.cardTitle">M890 破门霰弹</span>
+                  <span class="card-meta" data-i18n="weapon.shotgun.cardMeta">7发钢珠近战清场爆破</span>
                 </label>
               </div>
             </fieldset>
 
             <fieldset class="loadout-fieldset">
-              <legend class="loadout-legend">枪械战术涂装（通关/S级解锁）</legend>
+              <legend class="loadout-legend" data-i18n="menu.skinLegend">枪械战术涂装（通关/S级解锁）</legend>
               <div class="card-grid-3">
                 <label class="card">
                   <input type="radio" name="loadout-skin" value="standard" checked>
-                  <span class="card-title">标准暗钢</span>
-                  <span class="card-meta">制式哑光碳钢</span>
+                  <span class="card-title" data-i18n="skin.standard.title">标准暗钢</span>
+                  <span class="card-meta" data-i18n="skin.standard.meta">制式哑光碳钢</span>
                 </label>
                 <label class="card">
                   <input type="radio" name="loadout-skin" value="night_ops" disabled>
-                  <span class="card-title">夜幕幽灵</span>
-                  <span class="card-meta" id="skin-meta-night_ops">A/S级或零警通关解锁</span>
+                  <span class="card-title" data-i18n="skin.night_ops.title">夜幕幽灵</span>
+                  <span class="card-meta" id="skin-meta-night_ops" data-i18n="skin.night_ops.meta">A/S级或零警通关解锁</span>
                 </label>
                 <label class="card">
                   <input type="radio" name="loadout-skin" value="hazmat_blue" disabled>
-                  <span class="card-title">海军蓝 HAZMAT</span>
-                  <span class="card-meta" id="skin-meta-hazmat_blue">3次通关或S级解锁</span>
+                  <span class="card-title" data-i18n="skin.hazmat_blue.title">海军蓝 HAZMAT</span>
+                  <span class="card-meta" id="skin-meta-hazmat_blue" data-i18n="skin.hazmat_blue.meta">3次通关或S级解锁</span>
                 </label>
               </div>
             </fieldset>
 
             <fieldset class="loadout-fieldset" style="margin-bottom:2px;">
-              <legend class="loadout-legend">可叠加挑战词缀（额外提升 S 级评分倍率）</legend>
+              <legend class="loadout-legend" data-i18n="menu.mutatorLegend">可叠加挑战词缀（额外提升 S 级评分倍率）</legend>
               <div class="card-grid-3">
                 <label class="card">
                   <input type="checkbox" name="loadout-mutator" value="blackout">
-                  <span class="card-title">全图停电 +20%</span>
-                  <span class="card-meta">照明熄灭，强依赖 F/Q</span>
+                  <span class="card-title" data-i18n="mutator.blackout.title">全图停电 +20%</span>
+                  <span class="card-meta" data-i18n="mutator.blackout.meta">照明熄灭，强依赖 F/Q</span>
                 </label>
                 <label class="card">
                   <input type="checkbox" name="loadout-mutator" value="explosive_tide">
-                  <span class="card-title">高爆狂潮 +15%</span>
-                  <span class="card-meta">额外红桶 + 破片增威</span>
+                  <span class="card-title" data-i18n="mutator.explosive_tide.title">高爆狂潮 +15%</span>
+                  <span class="card-meta" data-i18n="mutator.explosive_tide.meta">额外红桶 + 破片增威</span>
                 </label>
                 <label class="card">
                   <input type="checkbox" name="loadout-mutator" value="elite_patrol">
-                  <span class="card-title">精锐巡防 +25%</span>
-                  <span class="card-meta">防爆盾与高台激光狙开局布防</span>
+                  <span class="card-title" data-i18n="mutator.elite_patrol.title">精锐巡防 +25%</span>
+                  <span class="card-meta" data-i18n="mutator.elite_patrol.meta">防爆盾与高台激光狙开局布防</span>
                 </label>
               </div>
             </fieldset>
@@ -1864,63 +1917,71 @@
       </details>
 
       <details id="disclosure-settings" class="menu-disclosure">
-        <summary id="disclosure-settings-summary">操作指南与画面 / 灵敏度 / 音频设置</summary>
+        <summary id="disclosure-settings-summary" data-i18n="menu.settingsSummary">操作指南与画面 / 灵敏度 / 音频设置</summary>
         <div class="disclosure-body">
-          <div class="ctrl-brief">
+          <div class="ctrl-brief" data-i18n-html="menu.ctrlBrief">
             <strong>操作指南：</strong>WASD 移动 · Shift 冲刺 · C 下蹲 · <strong>Shift+C 滑铲</strong> · 右键开镜(靠墙自动探头) · <strong>T 消音热装卸</strong> · <strong>1/2 切枪</strong> · <strong>按住 G 预瞄抛物线/松手投掷(右键取消) · 4 切投掷物</strong> · <strong>Q 扫描</strong> · <strong>V 近战/背刺</strong> · E 交互(近中继器按 G 贴 C4 强破)
           </div>
 
           <div class="opt-group">
             <div class="opt-row opt-select-row">
-              <label for="opt-quality">画质预设</label>
+              <label for="opt-quality" data-i18n="opt.quality">画质预设</label>
               <select id="opt-quality">
-                <option value="extreme">极限画质（SSR/GTAO + 动态投影 + 体积雾 + 高模 + AgX）</option>
-                <option value="high" selected>高画质（HDR泛光 + 镜头雨滴 + 水洼倒影）</option>
-                <option value="medium">中画质（优化倒影 + HDR泛光）</option>
-                <option value="low">低画质（原生直出 · 极致流畅）</option>
+                <option value="extreme" data-i18n="opt.quality.extreme">极限画质（SSR/GTAO + 动态投影 + 体积雾 + 高模 + AgX）</option>
+                <option value="high" selected data-i18n="opt.quality.high">高画质（HDR泛光 + 镜头雨滴 + 水洼倒影）</option>
+                <option value="medium" data-i18n="opt.quality.medium">中画质（优化倒影 + HDR泛光）</option>
+                <option value="low" data-i18n="opt.quality.low">低画质（原生直出 · 极致流畅）</option>
               </select>
             </div>
             <label class="switch-row" for="opt-drs" id="opt-drs-row">
               <span>
-                <strong>动态分辨率保护 (DRS)</strong>
-                <span class="switch-row-hint">极限画质帧率低于 55 FPS 时自动阶梯降分辨率稳住 60 FPS</span>
+                <strong data-i18n="opt.drs.label">动态分辨率保护 (DRS)</strong>
+                <span class="switch-row-hint" data-i18n="opt.drs.hint">极限画质帧率低于 55 FPS 时自动阶梯降分辨率稳住 60 FPS</span>
               </span>
               <input type="checkbox" id="opt-drs" role="switch" switch checked>
             </label>
             <div class="opt-row">
-              <label for="opt-sens">鼠标灵敏度</label>
+              <label for="opt-sens" data-i18n="opt.sens">鼠标灵敏度</label>
               <input type="range" id="opt-sens" min="0.3" max="2.5" step="0.1" value="1.0">
               <span id="val-sens" class="opt-val">1.0x</span>
             </div>
             <div class="opt-row">
-              <label for="opt-vol">主音量</label>
+              <label for="opt-vol" data-i18n="opt.vol">主音量</label>
               <input type="range" id="opt-vol" min="0" max="1" step="0.05" value="0.72">
               <span id="val-vol" class="opt-val">72%</span>
             </div>
             <div class="opt-row">
-              <label for="opt-voice-vol">中文语音</label>
+              <label for="opt-voice-vol" data-i18n="opt.voiceVol">语音音量</label>
               <input type="range" id="opt-voice-vol" min="0" max="1" step="0.05" value="0.85">
               <span id="val-voice-vol" class="opt-val">85%</span>
             </div>
             <div class="opt-row opt-select-row">
-              <label for="opt-voice-mode">电台音色</label>
+              <label for="opt-voice-lang" data-i18n="opt.voiceLang">语音语言</label>
+              <select id="opt-voice-lang">
+                <option value="auto" selected data-i18n="opt.voiceLang.auto">跟随界面语言（自动）</option>
+                <option value="zh" data-i18n="opt.voiceLang.zh">中文语音 (ZH)</option>
+                <option value="en" data-i18n="opt.voiceLang.en">英文语音 (EN)</option>
+              </select>
+            </div>
+            <div class="opt-row opt-select-row">
+              <label for="opt-voice-mode" data-i18n="opt.voiceMode">电台音色</label>
               <select id="opt-voice-mode">
-                <option value="radio" selected>战术对讲机滤波（推荐）</option>
-                <option value="clean">清晰原声直出</option>
-                <option value="off">关闭中文语音</option>
+                <option value="radio" selected data-i18n="opt.voiceMode.radio">战术对讲机滤波（推荐）</option>
+                <option value="clean" data-i18n="opt.voiceMode.clean">清晰原声直出</option>
+                <option value="off" data-i18n="opt.voiceMode.off">关闭电台语音</option>
               </select>
             </div>
             <label class="switch-row" for="opt-toggle-ads">
               <span>
-                <strong>切换开镜 (Toggle ADS)</strong>
-                <span class="switch-row-hint">右键单击切换瞄准状态，再按右键或冲刺时自动退出</span>
+                <strong data-i18n="opt.toggleAds.label">切换开镜 (Toggle ADS)</strong>
+                <span class="switch-row-hint" data-i18n="opt.toggleAds.hint">右键单击切换瞄准状态，再按右键或冲刺时自动退出</span>
               </span>
               <input type="checkbox" id="opt-toggle-ads" role="switch" switch>
             </label>
             <label class="switch-row" for="opt-invert-y">
               <span>
-                <strong>反转垂直视角 (Invert Y)</strong>
-                <span class="switch-row-hint">鼠标上移低头、下移抬头</span>
+                <strong data-i18n="opt.invertY.label">反转垂直视角 (Invert Y)</strong>
+                <span class="switch-row-hint" data-i18n="opt.invertY.hint">鼠标上移低头、下移抬头</span>
               </span>
               <input type="checkbox" id="opt-invert-y" role="switch" switch>
             </label>
@@ -1929,45 +1990,45 @@
       </details>
 
       <div class="dlg-actions">
-        <button type="button" id="btn-start" class="dlg-btn dlg-btn-primary" autofocus>开始新手教程（推荐）</button>
-        <button type="button" id="btn-secondary" class="dlg-btn dlg-btn-secondary">直接实战部署</button>
+        <button type="button" id="btn-start" class="dlg-btn dlg-btn-primary" autofocus data-i18n="btn.startTutorial">开始新手教程（推荐）</button>
+        <button type="button" id="btn-secondary" class="dlg-btn dlg-btn-secondary" data-i18n="btn.deployDirect">直接实战部署</button>
       </div>
       <div id="dlg-sub-actions" class="dlg-sub-actions">
-        <button type="button" id="btn-open-training" class="dlg-btn dlg-btn-training">训练模式 · 限时 / 无尽 / 关卡练习</button>
-        <button type="button" id="btn-return-main" class="dlg-btn dlg-btn-secondary" hidden>返回主菜单</button>
+        <button type="button" id="btn-open-training" class="dlg-btn dlg-btn-training" data-i18n="btn.openTraining">训练模式 · 限时 / 无尽 / 关卡练习</button>
+        <button type="button" id="btn-return-main" class="dlg-btn dlg-btn-secondary" hidden data-i18n="btn.returnMain">返回主菜单</button>
       </div>
     </div>
 
     <div id="menu-view-training" hidden>
-      <div id="train-tablist" class="train-tablist" role="tablist" aria-label="训练子模式">
-        <button type="button" id="tab-timed" class="train-tab" role="tab" aria-selected="true" tabindex="0" data-submode="timed">限时模式</button>
-        <button type="button" id="tab-endless" class="train-tab" role="tab" aria-selected="false" tabindex="-1" data-submode="endless">无尽模式</button>
-        <button type="button" id="tab-stage" class="train-tab" role="tab" aria-selected="false" tabindex="-1" data-submode="stage">关卡练习</button>
+      <div id="train-tablist" class="train-tablist" role="tablist" data-i18n-aria="aria.trainTablist" aria-label="训练子模式">
+        <button type="button" id="tab-timed" class="train-tab" role="tab" aria-selected="true" tabindex="0" data-submode="timed" data-i18n="train.tab.timed">限时模式</button>
+        <button type="button" id="tab-endless" class="train-tab" role="tab" aria-selected="false" tabindex="-1" data-submode="endless" data-i18n="train.tab.endless">无尽模式</button>
+        <button type="button" id="tab-stage" class="train-tab" role="tab" aria-selected="false" tabindex="-1" data-submode="stage" data-i18n="train.tab.stage">关卡练习</button>
       </div>
 
       <div id="train-tabpanel" class="train-panel" role="tabpanel" aria-labelledby="tab-timed" tabindex="0">
         <div id="train-best-strip" class="train-best-strip"></div>
 
         <div id="train-pane-timed" class="train-subpane">
-          <p class="train-panel-desc">安全靶场冲刺（无敌不受伤）。倒计时内快速击毁南侧中庭多距离移动靶机，精准命中红色核心触发 1 枪秒杀暴击并叠加连击倍率。</p>
-          <div class="train-pills" role="group" aria-label="限时模式倒计时长">
-            <button type="button" class="train-pill" data-duration="30" aria-pressed="false">30 秒冲刺</button>
-            <button type="button" class="train-pill" data-duration="60" aria-pressed="true">60 秒标准</button>
-            <button type="button" class="train-pill" data-duration="90" aria-pressed="false">90 秒耐力</button>
+          <p class="train-panel-desc" data-i18n="train.timed.desc">安全靶场冲刺（无敌不受伤）。倒计时内快速击毁南侧中庭多距离移动靶机，精准命中红色核心触发 1 枪秒杀暴击并叠加连击倍率。</p>
+          <div class="train-pills" role="group" data-i18n-aria="aria.timedDuration" aria-label="限时模式倒计时长">
+            <button type="button" class="train-pill" data-duration="30" aria-pressed="false" data-i18n="train.timed.d30">30 秒冲刺</button>
+            <button type="button" class="train-pill" data-duration="60" aria-pressed="true" data-i18n="train.timed.d60">60 秒标准</button>
+            <button type="button" class="train-pill" data-duration="90" aria-pressed="false" data-i18n="train.timed.d90">90 秒耐力</button>
           </div>
         </div>
 
         <div id="train-pane-endless" class="train-subpane" hidden>
-          <p class="train-panel-desc">真实战斗波次生存（第 2 波起出现警戒机兵、防爆重装与高台激光狙击手）。每波肃清触发三选一战术空投增益，并按波次补充弹药与回复护甲！</p>
+          <p class="train-panel-desc" data-i18n="train.endless.desc">真实战斗波次生存（第 2 波起出现警戒机兵、防爆重装与高台激光狙击手）。每波肃清触发三选一战术空投增益，并按波次补充弹药与回复护甲！</p>
         </div>
 
         <div id="train-pane-stage" class="train-subpane" hidden>
-          <p class="train-panel-desc">自由任选 04 号码头 6 大战术战区（含潜行消音摸哨与重装破盾反狙专项演练）展开实战练习。</p>
-          <div id="train-stage-grid" class="stage-grid" role="group" aria-label="选择练习关卡"></div>
+          <p class="train-panel-desc" data-i18n="train.stage.desc">自由任选 04 号码头 6 大战术战区（含潜行消音摸哨与重装破盾反狙专项演练）展开实战练习。</p>
+          <div id="train-stage-grid" class="stage-grid" role="group" data-i18n-aria="aria.stageGrid" aria-label="选择练习关卡"></div>
           <label class="switch-row" for="opt-train-invuln">
             <span>
-              <strong>无伤练路线（防阵亡）</strong>
-              <span class="switch-row-hint">开启后保留受击方向提醒但不会阵亡；仅记“演练通关”，不刷正式最快用时</span>
+              <strong data-i18n="train.stage.invulnLabel">无伤练路线（防阵亡）</strong>
+              <span class="switch-row-hint" data-i18n="train.stage.invulnHint">开启后保留受击方向提醒但不会阵亡；仅记“演练通关”，不刷正式最快用时</span>
             </span>
             <input type="checkbox" id="opt-train-invuln" role="switch" switch>
           </label>
@@ -1975,15 +2036,15 @@
       </div>
 
       <div class="dlg-actions">
-        <button type="button" id="btn-train-back" class="dlg-btn dlg-btn-secondary">← 返回</button>
-        <button type="button" id="btn-train-start" class="dlg-btn dlg-btn-primary" data-mode="training">开始训练（锁定视角）</button>
+        <button type="button" id="btn-train-back" class="dlg-btn dlg-btn-secondary" data-i18n="train.btnBack">← 返回</button>
+        <button type="button" id="btn-train-start" class="dlg-btn dlg-btn-primary" data-mode="training" data-i18n="train.btnStart">开始训练（锁定视角）</button>
       </div>
     </div>
   </dialog>
 
   <dialog id="airdrop-dialog" aria-labelledby="airdrop-title">
-    <h2 id="airdrop-title" style="margin:0 0 6px;font-size:20px;color:#fff;">战术空投补给 // 选择一项波间强化</h2>
-    <p id="airdrop-desc" style="margin:0 0 10px;font-size:13px;color:#adc3dd;">护甲与弹药已同步补给。请立刻选取空投模块继续迎战下一波机械集群：</p>
+    <h2 id="airdrop-title" style="margin:0 0 6px;font-size:20px;color:#fff;" data-i18n="airdrop.title">战术空投补给 // 选择一项波间强化</h2>
+    <p id="airdrop-desc" style="margin:0 0 10px;font-size:13px;color:#adc3dd;" data-i18n="airdrop.desc">护甲与弹药已同步补给。请立刻选取空投模块继续迎战下一波机械集群：</p>
     <form id="airdrop-form" method="dialog">
       <div id="airdrop-options"></div>
     </form>
@@ -1992,14 +2053,14 @@
   <div id="gfx-warmup-banner" popover="manual" role="status" aria-live="polite">
     <div class="warmup-head">
       <span class="warmup-dot" aria-hidden="true"></span>
-      <span id="warmup-title">正在后台异步预编译极限画质管线...</span>
+      <span id="warmup-title" data-i18n="warmup.bannerTitle">正在后台异步预编译极限画质管线...</span>
       <span id="warmup-pct">0%</span>
     </div>
     <div class="warmup-track"><div id="warmup-fill"></div></div>
   </div>
 
   <script src="src/three.bundle.js"></script>
-  <script src="voices/voice_pack.js"></script>
+  <script src="src/i18n.js"></script>
   <script src="src/tex.js"></script>
   <script src="src/extreme_gfx.js"></script>
   <script src="src/audio.js"></script>

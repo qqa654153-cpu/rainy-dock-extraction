@@ -371,6 +371,8 @@ const GameApp = (() => {
       this.radioTimer = 0;
       this.radioFullText = '';
       this.radioRevealIdx = 0;
+      this._radioToken = 0;
+      this._activeRadio = null;
       this._lastTutChipsKey = '';
       this.markerEls = new Map();
       this._proj = new THREE.Vector3();
@@ -391,6 +393,7 @@ const GameApp = (() => {
       }
       this._relaySeveredCache = [];
       this._lastDomCache = {
+        lang: (typeof I18n !== 'undefined' && I18n.getLang) ? I18n.getLang() : 'zh',
         hp: -1,
         hpLow: '',
         regenOpacity: '',
@@ -446,6 +449,24 @@ const GameApp = (() => {
       this.voice = voice;
     }
 
+    invalidateCache(lang) {
+      const cache = this._lastDomCache;
+      if (!cache) return;
+      if (lang) cache.lang = lang;
+      cache.interactLabel = '';
+      cache.objTitle = '';
+      cache.stealthText = '';
+      cache.wpnName = '';
+      cache.wpnSlot = '';
+      cache.supOn = null;
+      cache.grenadeText = '';
+      cache.scanText = '';
+      cache.diffText = '';
+      cache.flashText = '';
+      cache.perkKey = '';
+      this._lastTutChipsKey = '';
+    }
+
     clearKillFeed() {
       for (let i = 0; i < this._killFeedItems.length; i++) {
         const item = this._killFeedItems[i];
@@ -456,18 +477,22 @@ const GameApp = (() => {
 
     pushKillFeed(enemy, isCrit = false, silentTakedown = false) {
       if (!this.killFeedEl || !enemy || enemy.isTutorialTarget || enemy.isTrainingTarget) return;
-      const typeNames = {
-        drone: '巡逻无人机',
-        hound: '突袭机械犬',
-        shield: '防爆重装机兵',
-        sniper: '高台激光狙',
-        recon: '警戒发报机',
+      const typeKeys = {
+        drone: 'hud.enemy.drone',
+        hound: 'hud.enemy.hound',
+        shield: 'hud.enemy.shield',
+        sniper: 'hud.enemy.sniper',
+        recon: 'hud.enemy.recon',
       };
-      const label = typeNames[enemy.type] || '敌方单位';
-      const suffix = silentTakedown ? ' // 无声处决' : isCrit ? ' // 弱点暴击' : '';
+      const label = I18n.t(typeKeys[enemy.type] || 'hud.enemy.unknown');
+      const suffix = silentTakedown
+        ? I18n.t('hud.killSuffixSilent')
+        : isCrit
+          ? I18n.t('hud.killSuffixCrit')
+          : '';
       const el = document.createElement('div');
       el.className = 'kf-item' + (silentTakedown ? ' silent' : isCrit ? ' crit' : '');
-      el.textContent = `已消灭 ${label}${suffix}`;
+      el.textContent = I18n.t('hud.killFeed', { label, suffix });
       this.killFeedEl.appendChild(el);
       this._killFeedItems.push({ el, life: 3.2 });
       while (this._killFeedItems.length > 3) {
@@ -480,6 +505,8 @@ const GameApp = (() => {
 
     clearRadio() {
       this.radioTimer = 0;
+      this._activeRadio = null;
+      this._radioToken++;
       this.radioBox.classList.remove('active', 'tutorial', 'speaking');
       for (let i = 0; i < this.arcPool.length; i++) {
         this.arcPool[i].life = 0;
@@ -495,8 +522,14 @@ const GameApp = (() => {
 
     _buildCompassLabels() {
       const dirs = [
-        [0, '北'], [45, '东北'], [90, '东'], [135, '东南'],
-        [180, '南'], [225, '西南'], [270, '西'], [315, '西北'],
+        [0, I18n.t('hud.dir.N')],
+        [45, I18n.t('hud.dir.NE')],
+        [90, I18n.t('hud.dir.E')],
+        [135, I18n.t('hud.dir.SE')],
+        [180, I18n.t('hud.dir.S')],
+        [225, I18n.t('hud.dir.SW')],
+        [270, I18n.t('hud.dir.W')],
+        [315, I18n.t('hud.dir.NW')],
       ];
       let html = '';
       // 铺设 -360 到 +720 度无缝循环标尺 (每度 3px)
@@ -514,23 +547,79 @@ const GameApp = (() => {
       this.compassTrack.innerHTML = html;
     }
 
-    showRadio(speaker, text, duration = 5.8, isTutorial = false, voiceOpts = null) {
-      let resolvedSpeaker = speaker;
-      let resolvedText = text;
+    _resolveRadioCopy(speaker, text, voiceOpts) {
       const vOpts = voiceOpts || {};
+      const uiLang = (typeof I18n !== 'undefined' && I18n.getLang) ? I18n.getLang() : 'zh';
+      const anyPack = (vOpts.voiceId && this.voice && this.voice._getAnyLoadedPack)
+        ? this.voice._getAnyLoadedPack(vOpts.voiceId)
+        : null;
+      const packClip = anyPack && anyPack.clips ? anyPack.clips[vOpts.voiceId] : null;
+      const role = vOpts.role || (packClip && packClip.role) || 'watcher';
+
+      let resolvedSpeaker = speaker;
+      if (vOpts.speakerKey && typeof I18n !== 'undefined') {
+        const params = typeof vOpts.getSpeakerParams === 'function' ? vOpts.getSpeakerParams() : vOpts.speakerParams;
+        resolvedSpeaker = I18n.t(vOpts.speakerKey, params);
+      } else if (!resolvedSpeaker && this.voice && typeof this.voice.getRoleLabel === 'function') {
+        resolvedSpeaker = this.voice.getRoleLabel(role, uiLang);
+      } else if (!resolvedSpeaker && typeof I18n !== 'undefined') {
+        const key = role === 'instructor' ? 'app.speaker.instructor' : role === 'evac' ? 'app.speaker.evac' : 'app.speaker.watcher';
+        resolvedSpeaker = I18n.t(key);
+      }
+
+      let resolvedText = text;
+      if (vOpts.textKey && typeof I18n !== 'undefined') {
+        const params = typeof vOpts.getTextParams === 'function' ? vOpts.getTextParams() : vOpts.textParams;
+        resolvedText = I18n.t(vOpts.textKey, params);
+      } else if (!resolvedText && vOpts.voiceId && this.voice && typeof this.voice.getClipSubtitle === 'function') {
+        resolvedText = this.voice.getClipSubtitle(vOpts.voiceId, uiLang) || '';
+      }
+
+      return { resolvedSpeaker, resolvedText, role, uiLang };
+    }
+
+    refreshRadioLanguage() {
+      if (!this._activeRadio || !this.radioBox.classList.contains('active') || this.radioTimer <= 0) return;
+      const { speaker, text, vOpts } = this._activeRadio;
+      const hadKeyOrClip = !!(vOpts && (vOpts.speakerKey || vOpts.textKey || vOpts.voiceId));
+      if (!hadKeyOrClip) return;
+      const prevLen = this.radioFullText.length;
+      const wasDone = this.radioRevealIdx >= prevLen;
+      const { resolvedSpeaker, resolvedText } = this._resolveRadioCopy(
+        vOpts.speakerKey ? null : (vOpts.voiceId && !vOpts.hasCustomSpeaker ? null : speaker),
+        vOpts.textKey ? null : (vOpts.voiceId ? null : text),
+        vOpts
+      );
+      if (resolvedSpeaker) this.radioSpeaker.textContent = resolvedSpeaker;
+      if (resolvedText) {
+        this.radioFullText = resolvedText;
+        if (wasDone) {
+          this.radioRevealIdx = resolvedText.length;
+          this.radioText.textContent = resolvedText;
+        } else {
+          this.radioRevealIdx = Math.min(this.radioRevealIdx, resolvedText.length);
+          this.radioText.textContent = resolvedText.slice(0, Math.floor(this.radioRevealIdx));
+        }
+      }
+    }
+
+    showRadio(speaker, text, duration = 5.8, isTutorial = false, voiceOpts = null) {
+      const vOpts = voiceOpts || {};
+      const { resolvedSpeaker, resolvedText, role, uiLang } = this._resolveRadioCopy(speaker, text, vOpts);
+      const reqToken = ++this._radioToken;
 
       if (vOpts.voiceId && this.voice) {
-        const packClip = this.voice._getPackClip(vOpts.voiceId);
-        if (!resolvedText && packClip) resolvedText = packClip.displayText || '';
-        if (!resolvedSpeaker && packClip) {
-          const roleCfg = this.voice._getRoleConfig(vOpts.role || packClip.role);
-          if (roleCfg && roleCfg.speakerLabel) resolvedSpeaker = roleCfg.speakerLabel;
-        }
+        const activeVoiceLang = this.voice.voiceLang || ((typeof I18n !== 'undefined' && I18n.resolveVoiceLang) ? I18n.resolveVoiceLang('auto') : uiLang);
+        const ttsText = typeof this.voice.getClipSubtitle === 'function'
+          ? (this.voice.getClipSubtitle(vOpts.voiceId, activeVoiceLang) || '')
+          : '';
         const res = this.voice.speak(vOpts.voiceId, {
           text: resolvedText,
-          role: vOpts.role,
+          ttsText: ttsText || undefined,
+          role: vOpts.role || role,
           priority: vOpts.priority,
           cooldownSec: vOpts.cooldownSec,
+          voiceLang: vOpts.voiceLang,
           onStart: () => {
             this.radioBox.classList.add('speaking');
           },
@@ -546,11 +635,29 @@ const GameApp = (() => {
             return false;
           }
         }
+        if ((!resolvedText || !resolvedSpeaker) && typeof this.voice.ensurePackLoaded === 'function') {
+          this.voice.ensurePackLoaded(activeVoiceLang).then(() => {
+            if (this._radioToken !== reqToken || !this.radioBox.classList.contains('active')) return;
+            const curUiLang = (typeof I18n !== 'undefined' && I18n.getLang) ? I18n.getLang() : uiLang;
+            if (!this.radioFullText && typeof this.voice.getClipSubtitle === 'function') {
+              const lateText = this.voice.getClipSubtitle(vOpts.voiceId, curUiLang);
+              if (lateText) {
+                this.radioFullText = lateText;
+                this.radioRevealIdx = 0;
+              }
+            }
+            if (!speaker && typeof this.voice.getRoleLabel === 'function') {
+              const lateSpeaker = this.voice.getRoleLabel(role, curUiLang);
+              if (lateSpeaker) this.radioSpeaker.textContent = lateSpeaker;
+            }
+          });
+        }
       } else {
         this.radioBox.classList.remove('speaking');
       }
 
-      this.radioSpeaker.textContent = resolvedSpeaker || '守望者 // 频道 04';
+      this._activeRadio = { speaker: resolvedSpeaker, text: resolvedText, vOpts };
+      this.radioSpeaker.textContent = resolvedSpeaker || I18n.t('app.speaker.watcher');
       this.radioFullText = resolvedText || '';
       this.radioRevealIdx = 0;
       this.radioText.textContent = '';
@@ -588,6 +695,10 @@ const GameApp = (() => {
       const tutActive = !!(tutorial && tutorial.active);
       const trainActive = !tutActive && !!(training && training.active);
       const cache = this._lastDomCache;
+      const curLang = (typeof I18n !== 'undefined' && I18n.getLang) ? I18n.getLang() : 'zh';
+      if (cache.lang !== curLang) {
+        this.invalidateCache(curLang);
+      }
       // 1. 顶部罗盘滚动（Three.js yaw=0 朝 -Z 即正北 0°，右转 yaw<0 朝东 90°）
       let heading = ((-player.yaw * 180) / Math.PI) % 360;
       if (heading < 0) heading += 360;
@@ -672,12 +783,12 @@ const GameApp = (() => {
         for (const r of level.relays) {
           if (!r.severed && !r.disabledByMode && r.pos.distanceTo(player.pos) >= 3.6) {
             const key = 'relay-' + r.id;
-            targets.push({ key, label: `中继器 ${r.id}`, pos: r.pos, cls: 'mk-relay' });
+            targets.push({ key, label: I18n.t('hud.markerRelay', { id: r.id }), pos: r.pos, cls: 'mk-relay' });
             activeKeys.add(key);
           }
         }
         if (level.extraction && level.extraction.unlocked && level.extraction.pos.distanceTo(player.pos) >= 4.0) {
-          targets.push({ key: 'evac', label: '撤离船只', pos: level.extraction.pos, cls: 'mk-evac' });
+          targets.push({ key: 'evac', label: I18n.t('hud.markerEvac'), pos: level.extraction.pos, cls: 'mk-evac' });
           activeKeys.add('evac');
         }
       }
@@ -932,10 +1043,10 @@ const GameApp = (() => {
           }
         }
         const objTitle = missionState.phase === 'CUT_RELAYS'
-          ? `切断通信中继器 (${missionState.severedCount}/3)`
+          ? I18n.t('hud.objCutRelays', { count: missionState.severedCount })
           : isHoldout
-            ? '3/3 中继器断开 · 死守撤离区等待快艇解锁'
-            : '快艇已就绪 · 前往东北泊位登船撤离';
+            ? I18n.t('hud.objHoldout')
+            : I18n.t('hud.objExtract');
         if (cache.objTitle !== objTitle) {
           cache.objTitle = objTitle;
           this.objectiveTitle.textContent = objTitle;
@@ -945,17 +1056,17 @@ const GameApp = (() => {
       if (this.stealthChip && enemies.getStealthStatus) {
         const st = enemies.getStealthStatus();
         let nextStState = st.maxState;
-        let nextStText = '状态：隐匿潜行';
+        let nextStText = I18n.t('hud.stealthPatrol');
         if (st.sniperLocking) {
           nextStState = 'COMBAT';
-          nextStText = '⚠ 高台激光狙锁定预警！';
+          nextStText = I18n.t('hud.stealthSniperLock');
         } else if (st.callInUrgent) {
           nextStState = 'COMBAT';
-          nextStText = '⚠ 敌机发报呼叫增援！';
+          nextStText = I18n.t('hud.stealthCallIn');
         } else if (st.maxState === 'COMBAT') {
-          nextStText = '状态：全面交火';
+          nextStText = I18n.t('hud.stealthCombat');
         } else if (st.maxState === 'SUSPICIOUS') {
-          nextStText = `状态：警戒核查 (${Math.round(st.maxSuspicion * 100)}%)`;
+          nextStText = I18n.t('hud.stealthSuspicious', { pct: Math.round(st.maxSuspicion * 100) });
         }
         if (cache.stealthState !== nextStState) {
           cache.stealthState = nextStState;
@@ -967,10 +1078,11 @@ const GameApp = (() => {
         }
       }
 
-      const wCfg = weapon.currentConfig || { name: 'CAR-47', shortName: 'CAR-47', magSize: 30 };
-      if (this.wpnNameEl && cache.wpnName !== wCfg.name) {
-        cache.wpnName = wCfg.name;
-        this.wpnNameEl.textContent = wCfg.name;
+      const wCfg = weapon.currentConfig || { name: 'CAR-47', nameEn: 'CAR-47', shortName: 'CAR-47', shortNameEn: 'CAR-47', magSize: 30 };
+      const wName = I18n.field(wCfg, 'name') || wCfg.name || 'CAR-47';
+      if (this.wpnNameEl && cache.wpnName !== wName) {
+        cache.wpnName = wName;
+        this.wpnNameEl.textContent = wName;
       }
       const ammoStr = `${weapon.ammo}`;
       if (cache.ammoCur !== ammoStr) {
@@ -988,9 +1100,10 @@ const GameApp = (() => {
         this.ammoRes.textContent = resStr;
       }
       if (this.wpnSlotBadge) {
+        const wShort = I18n.field(wCfg, 'shortName') || wCfg.shortName || 'CAR-47';
         const slotTxt = weapon.activeSlot === 'secondary'
-          ? `[2] ${wCfg.shortName}`
-          : `[1] ${wCfg.shortName}`;
+          ? `[2] ${wShort}`
+          : `[1] ${wShort}`;
         if (cache.wpnSlot !== slotTxt) {
           cache.wpnSlot = slotTxt;
           this.wpnSlotBadge.textContent = slotTxt;
@@ -1000,7 +1113,7 @@ const GameApp = (() => {
         const supOn = !!weapon.suppressorAttached;
         if (cache.supOn !== supOn) {
           cache.supOn = supOn;
-          this.supStatus.textContent = supOn ? '[T] 消音：装' : '[T] 消音：卸';
+          this.supStatus.textContent = supOn ? I18n.t('hud.supOn') : I18n.t('hud.supOff');
           this.supStatus.classList.toggle('sup-on', supOn);
           this.supStatus.classList.toggle('sup-off', !supOn);
         }
@@ -1008,7 +1121,7 @@ const GameApp = (() => {
       if (this.grenadeStatus) {
         const gId = weapon.activeThrowableId || 'emp';
         const gCat = window.GameLogic && window.GameLogic.THROWABLE_CATALOG;
-        const gName = (gCat && gCat[gId] && gCat[gId].shortName) || gId.toUpperCase();
+        const gName = (gCat && gCat[gId] && I18n.field(gCat[gId], 'shortName')) || gId.toUpperCase();
         const cnt = (weapon.throwables && weapon.throwables[gId]) || 0;
         const grStr = `[G/4] ${gName} x${cnt}`;
         if (cache.grenadeText !== grStr) {
@@ -1018,7 +1131,7 @@ const GameApp = (() => {
       }
       if (this.scanStatus) {
         const sc = missionState.scanCooldown || 0;
-        const scanStr = sc > 0 ? `[Q] 扫描 ${sc.toFixed(1)}s` : '[Q] 扫描就绪';
+        const scanStr = sc > 0 ? I18n.t('hud.scanCooldown', { sec: sc.toFixed(1) }) : I18n.t('hud.scanReady');
         if (cache.scanText !== scanStr) {
           cache.scanText = scanStr;
           this.scanStatus.textContent = scanStr;
@@ -1034,8 +1147,8 @@ const GameApp = (() => {
         const dId = (effDiffCfg && effDiffCfg.id) || 'standard';
         const isLockedStd = tutActive || (trainActive && training.submode === 'timed');
         const dTxt = isLockedStd
-          ? '难度：标准基准'
-          : `难度：${(effDiffCfg && effDiffCfg.name) || '标准行动'}`;
+          ? I18n.t('hud.diffBenchmark')
+          : I18n.t('hud.diffLabel', { name: (effDiffCfg && I18n.field(effDiffCfg, 'name')) || I18n.t('diff.standard.title') });
         if (cache.diffId !== dId) {
           cache.diffId = dId;
           this.difficultyBadge.dataset.diff = dId;
@@ -1057,14 +1170,14 @@ const GameApp = (() => {
         cache.reloading = !!weapon.isReloading;
         this.reloadBadge.classList.toggle('active', cache.reloading);
       }
-      const fTxt = weapon.flashlightOn ? '枪灯：开' : '枪灯：关';
+      const fTxt = weapon.flashlightOn ? I18n.t('hud.flashOn') : I18n.t('hud.flashOff');
       if (cache.flashText !== fTxt) {
         cache.flashText = fTxt;
         this.flashStatus.textContent = fTxt;
       }
 
       if (this.radioTimer > 0) {
-        if (Number.isFinite(this.radioTimer)) {
+        if (dt > 0 && Number.isFinite(this.radioTimer)) {
           this.radioTimer -= dt;
         }
         if (this.radioRevealIdx < this.radioFullText.length) {
@@ -1087,7 +1200,7 @@ const GameApp = (() => {
       if (this.perkStrip) {
         const showPerks = !!(trainActive && training && training.submode === 'endless' &&
           Array.isArray(training.ownedPerks) && training.ownedPerks.length > 0);
-        const perkKey = showPerks ? training.ownedPerks.join(',') : '';
+        const perkKey = showPerks ? `${curLang}:${training.ownedPerks.join(',')}` : '';
         if (cache.perkKey !== perkKey) {
           cache.perkKey = perkKey;
           if (showPerks) {
@@ -1098,7 +1211,7 @@ const GameApp = (() => {
               const p = catalog.find((x) => x.id === pid);
               const pill = document.createElement('span');
               pill.className = 'perk-pill';
-              pill.textContent = (p && (p.shortTag || p.name)) || pid;
+              pill.textContent = (p && (I18n.field(p, 'shortTag') || I18n.field(p, 'name'))) || pid;
               this.perkStrip.appendChild(pill);
             }
             this.perkStrip.hidden = false;
@@ -1202,10 +1315,10 @@ const GameApp = (() => {
     _getPrimarySightLabel() {
       const priId = this.app.weapon.slots.primary.id;
       const cfg = this.app.weapon._getWeaponConfigById(priId);
-      const shortName = cfg ? cfg.shortName : '主武器';
-      if (priId === 'dmr') return `${shortName} 高倍密位狙击镜`;
-      if (priId === 'shotgun') return `${shortName} 开放式环形反射镜`;
-      return `${shortName} 宽视窗全息瞄准镜`;
+      const shortName = cfg ? (I18n.field(cfg, 'shortName') || cfg.shortName) : I18n.t('tut.primaryFallback');
+      if (priId === 'dmr') return I18n.t('tut.sight.dmr', { weapon: shortName });
+      if (priId === 'shotgun') return I18n.t('tut.sight.shotgun', { weapon: shortName });
+      return I18n.t('tut.sight.carbine', { weapon: shortName });
     }
 
     onFlashlightToggle() {
@@ -1264,19 +1377,19 @@ const GameApp = (() => {
       this._lastBlockedHintTime = now;
       if (kind === 'melee' && this.step === 4) {
         this.app.hud.showRadio(
-          '教官 // 潜行考核',
-          '该靶体免疫常规枪弹测试！请先按 [Q] 脉冲扫描，再绕至背面靠近按 [V] 无声处决！',
+          I18n.t('tut.speaker.stealth'),
+          I18n.t('tut.blocked.melee'),
           3.6,
           true,
-          { role: 'instructor', priority: 2 }
+          { role: 'instructor', priority: 2, speakerKey: 'tut.speaker.stealth', textKey: 'tut.blocked.melee' }
         );
       } else if (kind === 'emp' && this.step === 5) {
         this.app.hud.showRadio(
-          '教官 // 破盾考核',
-          '防爆盾未破除前无法正面贯穿！先用 [4]/[G] 切出并投掷 EMP 瘫痪护盾，再开火或爆破击杀！',
+          I18n.t('tut.speaker.shield'),
+          I18n.t('tut.blocked.emp'),
           3.8,
           true,
-          { role: 'instructor', priority: 2 }
+          { role: 'instructor', priority: 2, speakerKey: 'tut.speaker.shield', textKey: 'tut.blocked.emp' }
         );
       }
     }
@@ -1289,11 +1402,17 @@ const GameApp = (() => {
         markTutorialDone();
         this.app.audio.playRadioBeep();
         this.app.hud.showRadio(
-          '教官 // 结业考核',
-          '全部 8 项战术演练达标！2 秒后将在南侧泊位满状态重置，正式开启「0/3 中继器切断」实战撤离任务！',
+          I18n.t('tut.speaker.complete'),
+          I18n.t('tut.radio.complete'),
           Infinity,
           true,
-          { voiceId: 'tut_complete', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_complete',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.complete',
+            textKey: 'tut.radio.complete',
+          }
         );
       }
     }
@@ -1303,6 +1422,8 @@ const GameApp = (() => {
       this.step = step;
       app.hud._lastTutChipsKey = '';
       app.audio.playRadioBeep();
+      const speaker = I18n.t('tut.speaker.step', { step });
+      const speakerParams = { step };
 
       if (step === 1) {
         this.prevPos.copy(app.player.pos);
@@ -1311,11 +1432,18 @@ const GameApp = (() => {
         this.subtasks = { moved: false, sprinted: false, slid: false, crouched: false, flashlight: false };
         app.level.setTutorialGuide(false, 1, false);
         app.hud.showRadio(
-          '教官 // 战术引导 1/8',
-          '欢迎来到 04 号码头。先热身基础机动：WASD 移动、按住 Shift 冲刺、冲刺中按 C 滑铲、按 C 下蹲利用掩体，并按 F 切换战术枪灯。',
+          speaker,
+          I18n.t('tut.radio.step1'),
           Infinity,
           true,
-          { voiceId: 'tut_1', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_1',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step1',
+          }
         );
       } else if (step === 2) {
         this.stepStartShots = app.weapon.stats.shotsFired;
@@ -1323,11 +1451,19 @@ const GameApp = (() => {
         app.level.setTutorialGuide(false, 2, false);
         const sightName = this._getPrimarySightLabel();
         app.hud.showRadio(
-          '教官 // 战术引导 2/8',
-          `机动良好！按住右键使用「${sightName}」开镜（ADS）并点射 3 发，然后按 [1]/[2] 切换副手枪，再按 [T] 体验现场装卸消音器。`,
+          speaker,
+          I18n.t('tut.radio.step2', { sight: sightName }),
           Infinity,
           true,
-          { voiceId: 'tut_2', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_2',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step2',
+            getTextParams: () => ({ sight: this._getPrimarySightLabel() }),
+          }
         );
       } else if (step === 3) {
         this.tutorialDrone = app.enemies.spawnTutorialDrone(new THREE.Vector3(0, 4.2, 13.5));
@@ -1336,11 +1472,19 @@ const GameApp = (() => {
         app.level.setTutorialGuide(false, 3, false);
         const curMag = app.weapon.magSize;
         app.hud.showRadio(
-          '教官 // 战术引导 3/8',
-          `前方 13 米已投放训练靶机！瞄准正中红色核心打出 2 倍金色暴击将其击毁，随后按 [R] 将当前弹匣补满（${curMag} 发）。`,
+          speaker,
+          I18n.t('tut.radio.step3', { mag: curMag }),
           Infinity,
           true,
-          { voiceId: 'tut_3', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_3',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step3',
+            textParams: { mag: curMag },
+          }
         );
       } else if (step === 4) {
         this.tutorialStealthTarget = app.enemies.spawnTutorialStealthTarget(new THREE.Vector3(-3.5, 0.95, 11.0));
@@ -1348,11 +1492,18 @@ const GameApp = (() => {
         this.subtasks = { scanned: false, takedown: false };
         app.level.setTutorialGuide(true, 4, false);
         app.hud.showRadio(
-          '教官 // 战术引导 4/8',
-          '潜行暗杀演练：按 [Q] 触发战术脉冲扫描标记前方背对你的警戒单位，绕到它身后靠近按 [V] 执行无声处决（免疫普通子弹）！',
+          speaker,
+          I18n.t('tut.radio.step4'),
           Infinity,
           true,
-          { voiceId: 'tut_4', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_4',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step4',
+          }
         );
       } else if (step === 5) {
         this.tutorialShieldTarget = app.enemies.spawnTutorialShieldTarget(new THREE.Vector3(-1.5, 0.0, 12.5));
@@ -1362,21 +1513,35 @@ const GameApp = (() => {
         this.subtasks = { cycled: false, thrown: false, shieldKilled: false };
         app.level.setTutorialGuide(true, 5, false);
         app.hud.showRadio(
-          '教官 // 战术引导 5/8',
-          '防爆盾靶出现！按 [4] 切换投掷道具确认选定 EMP 雷，按 [G] 投出瘫痪护盾后开火击杀！（身旁蓝光补给箱可随时按 [E] 无限补雷）',
+          speaker,
+          I18n.t('tut.radio.step5'),
           Infinity,
           true,
-          { voiceId: 'tut_5', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_5',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step5',
+          }
         );
       } else if (step === 6) {
         this.subtasks = { climbed: false };
         app.level.setTutorialGuide(true, 6, false);
         app.hud.showRadio(
-          '教官 // 战术引导 6/8',
-          '善用集装箱制高点与自动探头！沿西侧青色光柱金属斜坡登上集装箱高台（贴箱边按右键开镜即可自动侧身探头）。',
+          speaker,
+          I18n.t('tut.radio.step6'),
           Infinity,
           true,
-          { voiceId: 'tut_6', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_6',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step6',
+          }
         );
       } else if (step === 7) {
         const alreadyIn = !!app.player.indoors;
@@ -1386,14 +1551,20 @@ const GameApp = (() => {
           app.player.timeSinceHit = 10;
         }
         app.level.setTutorialGuide(true, 7, alreadyIn);
+        const tKey = alreadyIn ? 'tut.radio.step7In' : 'tut.radio.step7Out';
         app.hud.showRadio(
-          '教官 // 战术引导 7/8',
-          alreadyIn
-            ? '已进入铁皮仓库！听：雨声瞬变低通闷响且地面干燥。靠近绿色演练医疗箱按 [E] 回满生命值！'
-            : '高台视野极佳！现在向西北铁皮仓库（青色光柱入口）移动，进屋体会暴雨隔绝声学并使用演练医疗箱。',
+          speaker,
+          I18n.t(tKey),
           Infinity,
           true,
-          { voiceId: alreadyIn ? 'tut_7_in' : 'tut_7_out', role: 'instructor', priority: 3 }
+          {
+            voiceId: alreadyIn ? 'tut_7_in' : 'tut_7_out',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: tKey,
+          }
         );
       } else if (step === 8) {
         const sim = app.level.tutorialRelay;
@@ -1409,11 +1580,18 @@ const GameApp = (() => {
         this.subtasks = { severed: false };
         app.level.setTutorialGuide(true, 8, true);
         app.hud.showRadio(
-          '教官 // 战术引导 8/8',
-          '最终演练：走出南门找到模拟中继器。你可以长按 [E] 无声黑入（不惊动敌人），或按 [G] 贴 C4 强爆摧毁，任选其一即可结业！',
+          speaker,
+          I18n.t('tut.radio.step8'),
           Infinity,
           true,
-          { voiceId: 'tut_8', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'tut_8',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'tut.speaker.step',
+            speakerParams,
+            textKey: 'tut.radio.step8',
+          }
         );
       }
     }
@@ -1427,7 +1605,7 @@ const GameApp = (() => {
       if (this.finishing) {
         this.finishTimer -= dt;
         if (this.finishTimer <= 0) {
-          app._startCombatMission('演练全部完成！已满状态部署至南侧泊位，切断 3 处通信中继器并登船撤离！', 'mission_start');
+          app._startCombatMission(I18n.t('tut.missionStartMsg'), 'mission_start', 'tut.missionStartMsg');
         }
         return;
       }
@@ -1507,11 +1685,18 @@ const GameApp = (() => {
           app.level.setTutorialGuide(true, 7, true);
           app.audio.playRadioBeep();
           app.hud.showRadio(
-            '教官 // 战术引导 7/8',
-            '已进入室内！听：雨声瞬变低通闷响且地面干燥（HP 已模拟受损）。靠近绿色演练医疗箱按 [E] 回满生命！',
+            I18n.t('tut.speaker.step', { step: 7 }),
+            I18n.t('tut.radio.step7Entered'),
             Infinity,
             true,
-            { voiceId: 'tut_7_in', role: 'instructor', priority: 3 }
+            {
+              voiceId: 'tut_7_in',
+              role: 'instructor',
+              priority: 3,
+              speakerKey: 'tut.speaker.step',
+              speakerParams: { step: 7 },
+              textKey: 'tut.radio.step7Entered',
+            }
           );
         }
         if (this.subtasks.indoors && this.subtasks.medkit) {
@@ -1542,96 +1727,98 @@ const GameApp = (() => {
     getGuideTargets(player, level) {
       if (!this.active) return [];
       if (this.step === 3 && this.tutorialDrone && !this.tutorialDrone.dead) {
-        return [{ key: 'tut-drone', label: '训练靶机', pos: this.tutorialDrone.group.position.clone(), hideDist: 2.0 }];
+        return [{ key: 'tut-drone', label: I18n.t('tut.marker.drone'), pos: this.tutorialDrone.group.position.clone(), hideDist: 2.0 }];
       }
       if (this.step === 4 && this.tutorialStealthTarget && !this.tutorialStealthTarget.dead) {
-        return [{ key: 'tut-stealth', label: '[Q]扫描 · 背后[V]处决', pos: this.tutorialStealthTarget.group.position.clone(), hideDist: 1.5 }];
+        return [{ key: 'tut-stealth', label: I18n.t('tut.marker.stealth'), pos: this.tutorialStealthTarget.group.position.clone(), hideDist: 1.5 }];
       }
       if (this.step === 5) {
         const list = [];
         if (this.tutorialShieldTarget && !this.tutorialShieldTarget.dead) {
-          list.push({ key: 'tut-shield', label: '[4/G]EMP破盾靶', pos: this.tutorialShieldTarget.group.position.clone(), hideDist: 2.0 });
+          list.push({ key: 'tut-shield', label: I18n.t('tut.marker.shield'), pos: this.tutorialShieldTarget.group.position.clone(), hideDist: 2.0 });
         }
         if (level.tutorialAmmoCrate) {
-          list.push({ key: 'tut-crate', label: 'EMP 补给箱', pos: level.tutorialAmmoCrate.pos, hideDist: 2.0 });
+          list.push({ key: 'tut-crate', label: I18n.t('tut.marker.crate'), pos: level.tutorialAmmoCrate.pos, hideDist: 2.0 });
         }
         return list;
       }
       if (this.step === 6) {
-        return [{ key: 'tut-ramp', label: '斜坡高台', pos: new THREE.Vector3(-16.0, 3.2, 10.0), hideDist: 2.8 }];
+        return [{ key: 'tut-ramp', label: I18n.t('tut.marker.ramp'), pos: new THREE.Vector3(-16.0, 3.2, 10.0), hideDist: 2.8 }];
       }
       if (this.step === 7) {
         if (!this.subtasks.indoors) {
-          return [{ key: 'tut-wh', label: '铁皮仓库入口', pos: new THREE.Vector3(-12.0, 2.0, -14.0), hideDist: 3.0 }];
+          return [{ key: 'tut-wh', label: I18n.t('tut.marker.wh'), pos: new THREE.Vector3(-12.0, 2.0, -14.0), hideDist: 3.0 }];
         }
         if (!this.subtasks.medkit && level.tutorialMedkit) {
-          return [{ key: 'tut-med', label: '演练医疗箱', pos: level.tutorialMedkit.pos, hideDist: 2.4 }];
+          return [{ key: 'tut-med', label: I18n.t('tut.marker.med'), pos: level.tutorialMedkit.pos, hideDist: 2.4 }];
         }
       }
       if (this.step === 8 && !this.subtasks.severed && level.tutorialRelay) {
-        return [{ key: 'tut-relay', label: '模拟中继器 (E黑入 / G贴C4)', pos: level.tutorialRelay.pos, hideDist: 3.2 }];
+        return [{ key: 'tut-relay', label: I18n.t('tut.marker.relay'), pos: level.tutorialRelay.pos, hideDist: 3.2 }];
       }
       return [];
     }
 
     getHudInfo() {
+      const lang = I18n.getLang();
       if (this.finishing) {
-        const chips = [{ label: '8 项演练全部达标', done: true }];
-        return { title: '新手教程完成 · 即将部署实战', chips, chipsKey: 'fin' };
+        const chips = [{ label: I18n.t('tut.finishingChip'), done: true }];
+        return { title: I18n.t('tut.finishingTitle'), chips, chipsKey: `fin:${lang}` };
       }
-      let title = `新手教程 (${this.step}/8)`;
+      let title = I18n.t('tut.titleGeneric', { step: this.step });
       let chips = [];
       if (this.step === 1) {
-        title = '新手教程 (1/8) · 机动、滑铲与枪灯';
+        title = I18n.t('tut.step1.title');
         chips = [
-          { label: 'WASD移动', done: !!this.subtasks.moved },
-          { label: 'Shift冲刺', done: !!this.subtasks.sprinted },
-          { label: 'Shift+C滑铲', done: !!this.subtasks.slid },
-          { label: 'C下蹲', done: !!this.subtasks.crouched },
-          { label: 'F枪灯', done: !!this.subtasks.flashlight },
+          { label: I18n.t('tut.step1.move'), done: !!this.subtasks.moved },
+          { label: I18n.t('tut.step1.sprint'), done: !!this.subtasks.sprinted },
+          { label: I18n.t('tut.step1.slide'), done: !!this.subtasks.slid },
+          { label: I18n.t('tut.step1.crouch'), done: !!this.subtasks.crouched },
+          { label: I18n.t('tut.step1.light'), done: !!this.subtasks.flashlight },
         ];
       } else if (this.step === 2) {
-        const wCfg = this.app.weapon.currentConfig || { shortName: '主武器' };
-        title = `新手教程 (2/8) · ${wCfg.shortName} 瞄具与消音`;
+        const wCfg = this.app.weapon.currentConfig || { shortName: I18n.t('tut.primaryFallback'), shortNameEn: I18n.t('tut.primaryFallback') };
+        const wShort = I18n.field(wCfg, 'shortName') || I18n.t('tut.primaryFallback');
+        title = I18n.t('tut.step2.title', { weapon: wShort });
         chips = [
-          { label: '右键开镜', done: !!this.subtasks.ads },
-          { label: `射击 ${this.subtasks.shots || 0}/3`, done: !!this.subtasks.fired },
-          { label: '1/2切副手枪', done: !!this.subtasks.switchedWeapon },
-          { label: 'T装卸消音', done: !!this.subtasks.toggledSuppressor },
+          { label: I18n.t('tut.step2.ads'), done: !!this.subtasks.ads },
+          { label: I18n.t('tut.step2.fire', { shots: this.subtasks.shots || 0 }), done: !!this.subtasks.fired },
+          { label: I18n.t('tut.step2.swap'), done: !!this.subtasks.switchedWeapon },
+          { label: I18n.t('tut.step2.sup'), done: !!this.subtasks.toggledSuppressor },
         ];
       } else if (this.step === 3) {
         const mag = this.app.weapon.magSize;
-        title = '新手教程 (3/8) · 弱点暴击与换弹';
+        title = I18n.t('tut.step3.title');
         chips = [
-          { label: '击毁训练靶机', done: !!this.subtasks.droneKilled },
-          { label: `R 换弹至 ${mag} 发`, done: !!this.subtasks.reloaded },
+          { label: I18n.t('tut.step3.drone'), done: !!this.subtasks.droneKilled },
+          { label: I18n.t('tut.step3.reload', { mag }), done: !!this.subtasks.reloaded },
         ];
       } else if (this.step === 4) {
-        title = '新手教程 (4/8) · 脉冲扫描与背后暗杀';
+        title = I18n.t('tut.step4.title');
         chips = [
-          { label: 'Q 脉冲扫描', done: !!this.subtasks.scanned },
-          { label: '背后按 V 处决', done: !!this.subtasks.takedown },
+          { label: I18n.t('tut.step4.scan'), done: !!this.subtasks.scanned },
+          { label: I18n.t('tut.step4.takedown'), done: !!this.subtasks.takedown },
         ];
       } else if (this.step === 5) {
-        title = '新手教程 (5/8) · EMP 破盾战术投掷';
+        title = I18n.t('tut.step5.title');
         chips = [
-          { label: '4 切换道具', done: !!this.subtasks.cycled },
-          { label: 'G 投EMP破盾并击杀', done: !!this.subtasks.shieldKilled },
+          { label: I18n.t('tut.step5.cycle'), done: !!this.subtasks.cycled },
+          { label: I18n.t('tut.step5.empKill'), done: !!this.subtasks.shieldKilled },
         ];
       } else if (this.step === 6) {
-        title = '新手教程 (6/8) · 高台与探头';
-        chips = [{ label: '登西侧集装箱高台', done: !!this.subtasks.climbed }];
+        title = I18n.t('tut.step6.title');
+        chips = [{ label: I18n.t('tut.step6.climb'), done: !!this.subtasks.climbed }];
       } else if (this.step === 7) {
-        title = '新手教程 (7/8) · 室内声学与医疗';
+        title = I18n.t('tut.step7.title');
         chips = [
-          { label: '进入铁皮仓库', done: !!this.subtasks.indoors },
-          { label: 'E 使用医疗箱', done: !!this.subtasks.medkit },
+          { label: I18n.t('tut.step7.enter'), done: !!this.subtasks.indoors },
+          { label: I18n.t('tut.step7.medkit'), done: !!this.subtasks.medkit },
         ];
       } else if (this.step === 8) {
-        title = '新手教程 (8/8) · 中继器双路线切断';
-        chips = [{ label: '长按E黑入 或 G贴C4', done: !!this.subtasks.severed }];
+        title = I18n.t('tut.step8.title');
+        chips = [{ label: I18n.t('tut.step8.sever'), done: !!this.subtasks.severed }];
       }
-      const chipsKey = `${this.step}:${this.app.weapon.activeSlot}:${this.app.weapon.magSize}:${chips.map((c) => `${c.label}=${c.done ? 1 : 0}`).join(',')}`;
+      const chipsKey = `${lang}:${this.step}:${this.app.weapon.activeSlot}:${this.app.weapon.magSize}:${chips.map((c) => `${c.label}=${c.done ? 1 : 0}`).join(',')}`;
       return { title, chips, chipsKey };
     }
   }
@@ -1848,11 +2035,18 @@ const GameApp = (() => {
         for (let i = 0; i < 3; i++) this._spawnTimedTarget();
         app.audio.playRadioBeep();
         app.hud.showRadio(
-          '教官 // 限时打靶',
-          `限时 ${this.timedDuration} 秒打靶开始！瞄准红色核心一枪秒杀暴击，保持连击倍率！`,
+          I18n.t('train.speaker.timed'),
+          I18n.t('train.radio.timedStart', { sec: this.timedDuration }),
           5.0,
           false,
-          { voiceId: 'train_timed_start', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'train_timed_start',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'train.speaker.timed',
+            textKey: 'train.radio.timedStart',
+            textParams: { sec: this.timedDuration },
+          }
         );
       } else if (submode === 'endless') {
         this.invulnerable = false;
@@ -1864,11 +2058,17 @@ const GameApp = (() => {
         this._startEndlessWave(1);
         app.audio.playRadioBeep();
         app.hud.showRadio(
-          '守望者 // 无尽防线',
-          '无尽波次防线已启动！清完每波可解锁战术空投增益并回复护甲，尽可能守住更久！',
+          I18n.t('train.speaker.endless'),
+          I18n.t('train.radio.endlessStart'),
           5.6,
           false,
-          { voiceId: 'train_endless_start', role: 'watcher', priority: 3 }
+          {
+            voiceId: 'train_endless_start',
+            role: 'watcher',
+            priority: 3,
+            speakerKey: 'train.speaker.endless',
+            textKey: 'train.radio.endlessStart',
+          }
         );
       } else {
         this.stageId = Number(config.stageId) || 1;
@@ -1889,11 +2089,17 @@ const GameApp = (() => {
           app.audio.playAlarmKlaxon(3);
           app.audio.playRadioBeep();
           app.hud.showRadio(
-            '撤离一号 // 关卡练习 4/6',
-            '关卡四：终局全面封锁突围！全速冲破机器防线，前往东北泊位长按 [E] 登船撤离！',
+            I18n.t('train.speaker.stageEvac'),
+            I18n.t('train.radio.stageExtract'),
             6.5,
             false,
-            { voiceId: 'train_stage_4', role: 'evac', priority: 3 }
+            {
+              voiceId: 'train_stage_4',
+              role: 'evac',
+              priority: 3,
+              speakerKey: 'train.speaker.stageEvac',
+              textKey: 'train.radio.stageExtract',
+            }
           );
         } else {
           app.level.setRelayModeState([this.stage.relayId]);
@@ -1906,12 +2112,21 @@ const GameApp = (() => {
             );
           }
           app.audio.playRadioBeep();
+          const stRef = this.stage;
           app.hud.showRadio(
-            `教官 // 关卡练习 ${this.stage.id}/6`,
-            `${this.stage.name}：消灭区域敌兵并切断 ${this.stage.relayId} 号中继器即可通关！`,
+            I18n.t('train.speaker.stage', { id: stRef.id }),
+            I18n.t('train.radio.stageStart', { name: I18n.field(stRef, 'name'), relay: stRef.relayId }),
             6.2,
             false,
-            { voiceId: this.stage.voiceId, role: 'instructor', priority: 3 }
+            {
+              voiceId: stRef.voiceId,
+              role: 'instructor',
+              priority: 3,
+              speakerKey: 'train.speaker.stage',
+              speakerParams: { id: stRef.id },
+              textKey: 'train.radio.stageStart',
+              getTextParams: () => ({ name: I18n.field(stRef, 'name'), relay: stRef.relayId }),
+            }
           );
         }
       }
@@ -2017,11 +2232,18 @@ const GameApp = (() => {
         }
         const cfg = (GameLogic.AIRDROP_PERKS || []).find((p) => p.id === perkId);
         this.app.hud.showRadio(
-          '守望者 // 战术空投',
-          `已装载「${cfg ? cfg.name : perkId}」！下一波将在 2.5 秒后切入。`,
+          I18n.t('train.speaker.airdrop'),
+          I18n.t('train.radio.airdropLoaded', { name: cfg ? I18n.field(cfg, 'name') : perkId }),
           4.2,
           false,
-          { voiceId: 'endless_airdrop_ready', role: 'watcher', priority: 2 }
+          {
+            voiceId: 'endless_airdrop_ready',
+            role: 'watcher',
+            priority: 2,
+            speakerKey: 'train.speaker.airdrop',
+            textKey: 'train.radio.airdropLoaded',
+            getTextParams: () => ({ name: cfg ? I18n.field(cfg, 'name') : perkId }),
+          }
         );
       }
       this.breatherTimer = 2.5;
@@ -2077,10 +2299,16 @@ const GameApp = (() => {
         if (rem > 0) {
           this.app.audio.playRadioBeep();
           this.app.hud.showRadio(
-            `教官 // 关卡练习 ${this.stage.id}/6`,
-            `${relay.id} 号中继器已切断！敌方增援已抵达，肃清剩余 ${rem} 个敌对目标即可过关！`,
+            I18n.t('train.speaker.stage', { id: this.stage.id }),
+            I18n.t('train.radio.stageRelayCut', { id: relay.id, rem }),
             4.8,
-            false
+            false,
+            {
+              speakerKey: 'train.speaker.stage',
+              speakerParams: { id: this.stage.id },
+              textKey: 'train.radio.stageRelayCut',
+              textParams: { id: relay.id, rem },
+            }
           );
         }
       }
@@ -2142,11 +2370,18 @@ const GameApp = (() => {
             this._startEndlessWave(this.wave + 1);
             app.audio.playRadioBeep();
             app.hud.showRadio(
-              '守望者 // 无尽防线',
-              `第 ${this.wave} 波机械集群来袭（共 ${this.waveSpec.totalCount} 个目标），注意掩体走位！`,
+              I18n.t('train.speaker.endless'),
+              I18n.t('train.radio.endlessWave', { wave: this.wave, total: this.waveSpec.totalCount }),
               4.6,
               false,
-              { voiceId: 'train_endless_wave', role: 'watcher', priority: 3 }
+              {
+                voiceId: 'train_endless_wave',
+                role: 'watcher',
+                priority: 3,
+                speakerKey: 'train.speaker.endless',
+                textKey: 'train.radio.endlessWave',
+                textParams: { wave: this.wave, total: this.waveSpec.totalCount },
+              }
             );
           }
         }
@@ -2160,6 +2395,7 @@ const GameApp = (() => {
     }
 
     getHudInfo() {
+      const lang = I18n.getLang();
       if (this.submode === 'timed') {
         const secLeft = Math.ceil(this.timeRemaining);
         const mins = Math.floor(secLeft / 60);
@@ -2170,15 +2406,15 @@ const GameApp = (() => {
         const urgent = secLeft <= 5;
         const timerTone = urgent ? 'danger' : secLeft <= 10 ? 'warn' : '';
         const chips = [
-          { label: `得分 ${this.score}`, done: false, tone: '' },
-          { label: `连击 ${this.combo} (x${mult})`, done: this.combo >= 3, tone: '' },
-          { label: `击毁 ${this.kills}`, done: false, tone: timerTone },
+          { label: I18n.t('train.hud.score', { score: this.score }), done: false, tone: '' },
+          { label: I18n.t('train.hud.combo', { combo: this.combo, mult }), done: this.combo >= 3, tone: '' },
+          { label: I18n.t('train.hud.kills', { kills: this.kills }), done: false, tone: timerTone },
         ];
         return {
-          title: `限时打靶 · 剩余 ${mins}:${secs}`,
+          title: I18n.t('train.hud.timedTitle', { mins, secs }),
           urgent,
           chips,
-          chipsKey: `t:${secLeft}:${this.score}:${this.combo}:${this.kills}`,
+          chipsKey: `${lang}:t:${secLeft}:${this.score}:${this.combo}:${this.kills}`,
         };
       }
 
@@ -2188,19 +2424,25 @@ const GameApp = (() => {
         const mins = Math.floor(this.app.elapsedTime / 60);
         const secs = String(Math.floor(this.app.elapsedTime % 60)).padStart(2, '0');
         const title = this.waveState === 'BREATHER'
-          ? `无尽波次 · 空投整备 (${Math.max(0.1, this.breatherTimer).toFixed(1)}s)`
-          : `无尽波次 · 第 ${this.wave} 波`;
+          ? I18n.t('train.hud.endlessBreatherTitle', { sec: Math.max(0.1, this.breatherTimer).toFixed(1) })
+          : I18n.t('train.hud.endlessWaveTitle', { wave: this.wave });
         const chips = [
-          { label: this.waveState === 'BREATHER' ? '整备就绪' : `剩余敌机 ${remaining}`, done: this.waveState === 'BREATHER', tone: '' },
-          { label: `增益 ${this.ownedPerks.length}`, done: this.ownedPerks.length > 0, tone: '' },
-          { label: `总击杀 ${this.kills}`, done: false, tone: '' },
-          { label: `存活 ${mins}:${secs}`, done: false, tone: '' },
+          {
+            label: this.waveState === 'BREATHER'
+              ? I18n.t('train.hud.endlessReady')
+              : I18n.t('train.hud.endlessRemaining', { count: remaining }),
+            done: this.waveState === 'BREATHER',
+            tone: '',
+          },
+          { label: I18n.t('train.hud.perks', { count: this.ownedPerks.length }), done: this.ownedPerks.length > 0, tone: '' },
+          { label: I18n.t('train.hud.totalKills', { kills: this.kills }), done: false, tone: '' },
+          { label: I18n.t('train.hud.survived', { mins, secs }), done: false, tone: '' },
         ];
         return {
           title,
           urgent: false,
           chips,
-          chipsKey: `e:${this.wave}:${this.waveState}:${Math.ceil(this.breatherTimer * 5)}:${remaining}:${this.ownedPerks.length}:${this.kills}:${secs}`,
+          chipsKey: `${lang}:e:${this.wave}:${this.waveState}:${Math.ceil(this.breatherTimer * 5)}:${remaining}:${this.ownedPerks.length}:${this.kills}:${secs}`,
         };
       }
 
@@ -2209,34 +2451,38 @@ const GameApp = (() => {
       const secs = String(Math.floor(this.app.elapsedTime % 60)).padStart(2, '0');
       const chips = this.stage.isExtractStage
         ? [
-            { label: '东北泊位登船撤离', done: false, tone: 'warn' },
-            { label: `活跃敌机 ${activeCount}`, done: activeCount === 0, tone: '' },
-            { label: `用时 ${mins}:${secs}`, done: false, tone: '' },
+            { label: I18n.t('train.hud.extractBerth'), done: false, tone: 'warn' },
+            { label: I18n.t('train.hud.activeEnemies', { count: activeCount }), done: activeCount === 0, tone: '' },
+            { label: I18n.t('train.hud.elapsed', { mins, secs }), done: false, tone: '' },
           ]
         : [
-            { label: `${this.stage.relayId}号中继器`, done: this.stageRelaySevered, tone: '' },
-            { label: `剩余敌机 ${activeCount}`, done: activeCount === 0, tone: '' },
-            { label: `用时 ${mins}:${secs}`, done: false, tone: '' },
+            { label: I18n.t('train.hud.relayTarget', { id: this.stage.relayId }), done: this.stageRelaySevered, tone: '' },
+            { label: I18n.t('train.hud.remainingEnemies', { count: activeCount }), done: activeCount === 0, tone: '' },
+            { label: I18n.t('train.hud.elapsed', { mins, secs }), done: false, tone: '' },
           ];
       if (this.invulnerable) {
-        chips.push({ label: `无伤演练 (受击${this.app.player.simulatedHits})`, done: false, tone: 'warn' });
+        chips.push({ label: I18n.t('train.hud.practiceHits', { hits: this.app.player.simulatedHits }), done: false, tone: 'warn' });
       }
       return {
-        title: `关卡练习 ${this.stage.id}/6 · ${this.stage.shortName}`,
+        title: I18n.t('train.hud.stageTitle', { id: this.stage.id, name: I18n.field(this.stage, 'shortName') }),
         urgent: false,
         chips,
-        chipsKey: `s:${this.stage.id}:${this.stageRelaySevered ? 1 : 0}:${activeCount}:${secs}:${this.invulnerable ? this.app.player.simulatedHits : -1}`,
+        chipsKey: `${lang}:s:${this.stage.id}:${this.stageRelaySevered ? 1 : 0}:${activeCount}:${secs}:${this.invulnerable ? this.app.player.simulatedHits : -1}`,
       };
     }
   }
 
   class App {
     constructor() {
+      if (typeof I18n !== 'undefined' && typeof I18n.applyDOM === 'function') {
+        I18n.applyDOM();
+      }
       this.canvas = document.getElementById('game-canvas');
       this.dialog = document.getElementById('menu-dialog');
       this.dlgTitle = document.getElementById('dlg-title');
       this.dlgDesc = document.getElementById('dlg-desc');
       this.dlgStats = document.getElementById('dlg-stats');
+      this.langButtons = Array.from(document.querySelectorAll('#lang-switch .lang-btn[data-lang]'));
       this.menuViewMain = document.getElementById('menu-view-main');
       this.menuViewTraining = document.getElementById('menu-view-training');
       this.ctrlBrief = this.menuViewMain ? this.menuViewMain.querySelector('.ctrl-brief') : null;
@@ -2272,6 +2518,7 @@ const GameApp = (() => {
       this.volOut = document.getElementById('val-vol');
       this.voiceVolSlider = document.getElementById('opt-voice-vol');
       this.voiceVolOut = document.getElementById('val-voice-vol');
+      this.voiceLangSelect = document.getElementById('opt-voice-lang');
       this.voiceModeSelect = document.getElementById('opt-voice-mode');
       this.optToggleAds = document.getElementById('opt-toggle-ads');
       this.optInvertY = document.getElementById('opt-invert-y');
@@ -2296,8 +2543,12 @@ const GameApp = (() => {
       this.fpsSmooth = 60;
       this.lastFrameTime = performance.now();
 
+      this.userSettings = loadUserSettings();
+      const initialVoiceLang = I18n.resolveVoiceLang(this.userSettings.voiceLang);
+
       this.audio = new AudioEngine();
-      this.voice = new VoiceEngine(this.audio);
+      this.voice = new VoiceEngine(this.audio, { voiceLang: initialVoiceLang });
+      this.voice.setVoiceLang(initialVoiceLang);
       this.texFactory = new TextureFactory(4).buildAll();
       this.render = new RenderEngine(this.canvas, this.texFactory);
       this.level = new LevelBuilder.Builder(this.render, this.texFactory).build();
@@ -2317,7 +2568,6 @@ const GameApp = (() => {
       if (!unlockedSkinsInit.includes(this.loadoutConfig.skin)) {
         this.loadoutConfig.skin = 'standard';
       }
-      this.userSettings = loadUserSettings();
       this.toggleAds = !!this.userSettings.toggleAds;
       this.player.sensitivity = this.userSettings.sensitivity;
       this.player.invertY = !!this.userSettings.invertY;
@@ -2328,6 +2578,7 @@ const GameApp = (() => {
       if (this.sensSlider) this.sensSlider.value = String(this.userSettings.sensitivity);
       if (this.volSlider) this.volSlider.value = String(this.userSettings.volume);
       if (this.voiceVolSlider) this.voiceVolSlider.value = String(this.userSettings.voiceVolume);
+      if (this.voiceLangSelect) this.voiceLangSelect.value = this.userSettings.voiceLang || 'auto';
       if (this.voiceModeSelect) this.voiceModeSelect.value = this.userSettings.voiceMode;
       if (this.optToggleAds) this.optToggleAds.checked = !!this.userSettings.toggleAds;
       if (this.optInvertY) this.optInvertY.checked = !!this.userSettings.invertY;
@@ -2338,8 +2589,11 @@ const GameApp = (() => {
       this.sniperWarnSpoken = false;
       this.holdout15Spoken = false;
       this._pendingAirdropDefaultId = '';
+      this._pendingAirdropOptions = null;
+      this._pendingAirdropWave = 0;
       this.lastTrainingResult = null;
-      this._lastEndCopy = null;
+      this._lastDebrief = null;
+      this._interactPromptSpec = null;
       this._aimDirTmp = new THREE.Vector3();
       this._playerExpTmp = new THREE.Vector3();
       this._gPlantedC4ThisPress = false;
@@ -2373,44 +2627,76 @@ const GameApp = (() => {
       this.player.onLowHpWarning = () => {
         if (!this.tutorial.active && !this.training.isTimedSafe() && this.state === 'PLAYING') {
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            '警告：护甲生命值严重受损！立即寻找掩体或使用医疗箱！',
+            I18n.t('app.speaker.watcher'),
+            I18n.t('app.radio.lowHp'),
             4.6,
             false,
-            { voiceId: 'tac_low_hp', role: 'watcher', priority: 2, cooldownSec: 16, tacOnly: true }
+            {
+              voiceId: 'tac_low_hp',
+              role: 'watcher',
+              priority: 2,
+              cooldownSec: 16,
+              tacOnly: true,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'app.radio.lowHp',
+            }
           );
         }
       };
       this.weapon.onEmptyReload = () => {
         if (!this.tutorial.active && !this.training.isTimedSafe() && this.state === 'PLAYING') {
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            '弹匣打空，正在紧急换弹！',
+            I18n.t('app.speaker.watcher'),
+            I18n.t('app.radio.ammoEmpty'),
             3.4,
             false,
-            { voiceId: 'tac_ammo_empty', role: 'watcher', priority: 1, cooldownSec: 8, tacOnly: true }
+            {
+              voiceId: 'tac_ammo_empty',
+              role: 'watcher',
+              priority: 1,
+              cooldownSec: 8,
+              tacOnly: true,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'app.radio.ammoEmpty',
+            }
           );
         }
       };
       this.weapon.onLowReserve = () => {
         if (!this.tutorial.active && !this.training.isTimedSafe() && this.state === 'PLAYING') {
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            '警告：备用弹药余量见底！靠近闪烁黄标的战术弹药箱 [E] 可补满弹药与投掷物！',
+            I18n.t('app.speaker.watcher'),
+            I18n.t('app.radio.lowReserve'),
             4.6,
             false,
-            { voiceId: 'ammo_low_reserve', role: 'watcher', priority: 2, cooldownSec: 22, tacOnly: true }
+            {
+              voiceId: 'ammo_low_reserve',
+              role: 'watcher',
+              priority: 2,
+              cooldownSec: 22,
+              tacOnly: true,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'app.radio.lowReserve',
+            }
           );
         }
       };
       this.weapon.onBreakerHit = (breaker) => {
         this.audio.playSwitchClick();
+        const getLabel = () => I18n.field(breaker, 'label') || I18n.field(breaker, 'name') || breaker.id;
         this.hud.showRadio(
-          '守望者 // 频道 04',
-          `${breaker.label} 已被击毁断电，周边侦查照明瘫痪！`,
+          I18n.t('app.speaker.watcher'),
+          I18n.t('app.radio.breakerShot', { label: getLabel() }),
           4.0,
           false,
-          { role: 'watcher', priority: 1, cooldownSec: 6 }
+          {
+            role: 'watcher',
+            priority: 1,
+            cooldownSec: 6,
+            speakerKey: 'app.speaker.watcher',
+            textKey: 'app.radio.breakerShot',
+            getTextParams: () => ({ label: getLabel() }),
+          }
         );
       };
       this.weapon.onBarrelHit = (barrel, dmg) => this._damageBarrel(barrel, dmg);
@@ -2456,7 +2742,7 @@ const GameApp = (() => {
       }
     }
 
-    _showWarmupBanner(pct = 0, msg = '正在后台异步预编译极限画质管线...') {
+    _showWarmupBanner(pct = 0, msg = I18n.t('warmup.bannerTitle')) {
       if (!this.warmupBanner) return;
       if (this._warmupHideTimer) {
         clearTimeout(this._warmupHideTimer);
@@ -2562,14 +2848,14 @@ const GameApp = (() => {
 
       // 异步分帧烘焙 PBR 纹理与 compileAsync Shader 预编译，不阻塞主线程与 UI
       if (this.qualitySelect) this.qualitySelect.value = 'extreme';
-      this._showWarmupBanner(0.02, '正在后台异步预编译极限画质管线...');
+      this._showWarmupBanner(0.02, I18n.t('warmup.bannerTitle'));
       const extraShadowLights = this.weapon && this.weapon.flashlight ? [this.weapon.flashlight] : [];
       let prepared = false;
       try {
         prepared = await this.render.prepareExtremeAsync({
           onProgress: (pct, msg) => {
             if (token !== this._gfxWarmupToken) return;
-            this._showWarmupBanner(pct, msg || '正在后台异步预编译极限画质...');
+            this._showWarmupBanner(pct, msg || I18n.t('warmup.bannerTitle'));
           },
           isCancelled: () => token !== this._gfxWarmupToken,
           onPrepareDetail: (enabled) => applyDetail(enabled),
@@ -2584,7 +2870,7 @@ const GameApp = (() => {
       }
 
       if (!prepared) {
-        this._showWarmupBanner(1.0, '当前显卡不支持极限管线，已平滑切回高画质');
+        this._showWarmupBanner(1.0, I18n.t('app.warmupFallbackHigh'));
         this._hideWarmupBanner(2400);
         this.render.setQuality('high');
         applyDetail(false);
@@ -2597,7 +2883,7 @@ const GameApp = (() => {
       applyDetail(true);
       if (this.qualitySelect) this.qualitySelect.value = this.render.quality;
       saveGfx(this.render.quality);
-      this._showWarmupBanner(1.0, '极限画质管线预热完成');
+      this._showWarmupBanner(1.0, I18n.t('app.warmupDone'));
       this._hideWarmupBanner(1300);
     }
 
@@ -2648,10 +2934,18 @@ const GameApp = (() => {
         const p = this.careerProfile || GameLogic.createDefaultCareerProfile();
         this.careerBestStrip.hidden = this.state === 'PAUSED';
         if (p.clears > 0) {
-          const timeTxt = p.bestTimeSec !== null ? ` · 最快 ${this._formatDuration(p.bestTimeSec, true)}` : '';
-          this.careerBestStrip.innerHTML = `<span>特遣档案 // 最高评价 <strong>${p.bestGrade || '-'} (${p.bestScore}分)</strong></span><strong>通关 ${p.clears} 次${timeTxt} · 涂装 ${unlocked.length}/3</strong>`;
+          const timeTxt = p.bestTimeSec !== null
+            ? I18n.t('app.careerBestTime', { time: this._formatDuration(p.bestTimeSec, true) })
+            : '';
+          this.careerBestStrip.innerHTML = I18n.t('app.careerClearedHtml', {
+            grade: p.bestGrade || '-',
+            score: p.bestScore,
+            clears: p.clears,
+            timeTxt,
+            skins: unlocked.length,
+          });
         } else {
-          this.careerBestStrip.innerHTML = '<span>特遣档案 // 尚未通关</span><strong>A/S级或零警报通关解锁战术涂装</strong>';
+          this.careerBestStrip.innerHTML = I18n.t('app.careerEmptyHtml');
         }
       }
       for (const r of this.loadoutWeaponRadios) {
@@ -2664,11 +2958,11 @@ const GameApp = (() => {
         const metaEl = document.getElementById(`skin-meta-${r.value}`);
         if (metaEl) {
           if (canUse && r.value !== 'standard') {
-            metaEl.textContent = '✓ 已解锁 · 点击装备';
+            metaEl.textContent = I18n.t('app.skinUnlocked');
           } else if (r.value === 'night_ops') {
-            metaEl.textContent = 'A/S级或零警通关解锁';
+            metaEl.textContent = I18n.t('skin.night_ops.meta');
           } else if (r.value === 'hazmat_blue') {
-            metaEl.textContent = '3次通关或S级解锁';
+            metaEl.textContent = I18n.t('skin.hazmat_blue.meta');
           }
         }
       }
@@ -2680,14 +2974,47 @@ const GameApp = (() => {
       }
       const diffCfg = this._getEffectiveDiffConfig(false);
       if (this.diffSummaryEl && diffCfg) {
-        this.diffSummaryEl.innerHTML = `<span class="diff-sum-tag">${diffCfg.name}</span><span>${diffCfg.summary} · 评分 ${diffCfg.scoreMult.toFixed(2)}x</span>`;
+        this.diffSummaryEl.innerHTML = I18n.t('app.diffSummaryHtml', {
+          name: I18n.field(diffCfg, 'name'),
+          summary: I18n.field(diffCfg, 'summary'),
+          mult: diffCfg.scoreMult.toFixed(2),
+        });
       }
       if (this.disclosureLoadoutSummary) {
         const wCfg = GameLogic.WEAPON_CATALOG && GameLogic.WEAPON_CATALOG[this.loadoutConfig.primaryWeapon];
         const sCfg = GameLogic.GUN_SKINS && GameLogic.GUN_SKINS[this.loadoutConfig.skin];
         const mutCnt = (this.loadoutConfig.mutators || []).length;
-        const mutTxt = mutCnt > 0 ? ` · ${mutCnt} 项词缀` : '';
-        this.disclosureLoadoutSummary.textContent = `武器配装与挑战词缀（${(wCfg && wCfg.shortName) || this.loadoutConfig.primaryWeapon} · ${(sCfg && sCfg.name) || '标准暗钢'}${mutTxt}）`;
+        const mutTxt = mutCnt === 1
+          ? I18n.t('app.loadoutMutatorOne')
+          : mutCnt > 1
+            ? I18n.t('app.loadoutMutatorMany', { count: mutCnt })
+            : '';
+        this.disclosureLoadoutSummary.textContent = I18n.t('app.loadoutSummary', {
+          weapon: (wCfg && I18n.field(wCfg, 'shortName')) || this.loadoutConfig.primaryWeapon,
+          skin: (sCfg && I18n.field(sCfg, 'name')) || I18n.t('skin.standard.title'),
+          mutTxt,
+        });
+      }
+    }
+
+    _renderAirdropOptions(options, waveNum) {
+      if (!this.airdropOptions) return;
+      this.airdropOptions.innerHTML = '';
+      for (const opt of (options || [])) {
+        const btn = document.createElement('button');
+        btn.type = 'submit';
+        btn.className = 'airdrop-card-btn';
+        btn.value = opt.id;
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = I18n.t('train.airdropOptionTitle', {
+          name: I18n.field(opt, 'name'),
+          wave: waveNum,
+        });
+        const descEl = document.createElement('span');
+        descEl.textContent = I18n.field(opt, 'desc');
+        btn.appendChild(titleEl);
+        btn.appendChild(descEl);
+        this.airdropOptions.appendChild(btn);
       }
     }
 
@@ -2707,20 +3034,9 @@ const GameApp = (() => {
         document.exitPointerLock();
       }
       this._pendingAirdropDefaultId = (options && options[0] && options[0].id) || '';
-      this.airdropOptions.innerHTML = '';
-      for (const opt of (options || [])) {
-        const btn = document.createElement('button');
-        btn.type = 'submit';
-        btn.className = 'airdrop-card-btn';
-        btn.value = opt.id;
-        const titleEl = document.createElement('strong');
-        titleEl.textContent = `${opt.name}（第 ${waveNum} 波空投）`;
-        const descEl = document.createElement('span');
-        descEl.textContent = opt.desc;
-        btn.appendChild(titleEl);
-        btn.appendChild(descEl);
-        this.airdropOptions.appendChild(btn);
-      }
+      this._pendingAirdropOptions = options || [];
+      this._pendingAirdropWave = waveNum;
+      this._renderAirdropOptions(this._pendingAirdropOptions, waveNum);
       this.airdropDialog.returnValue = '';
       if (!this.airdropDialog.open) this.airdropDialog.showModal();
     }
@@ -2730,11 +3046,11 @@ const GameApp = (() => {
       this.trainStageGrid.innerHTML = '';
       for (const stage of GameLogic.TRAINING_STAGES) {
         const rec = (this.trainingRecords.stages && this.trainingRecords.stages[String(stage.id)]) || {};
-        let metaText = '尚未通关';
+        let metaText = I18n.t('train.stageNotCleared');
         if (rec.bestTime !== null && rec.bestTime !== undefined) {
-          metaText = `正式最快 ${this._formatDuration(rec.bestTime, true)}`;
+          metaText = I18n.t('train.stageBestOfficial', { time: this._formatDuration(rec.bestTime, true) });
         } else if (rec.practiceCleared) {
-          metaText = '演练已通关（未记正式用时）';
+          metaText = I18n.t('train.stagePracticeCleared');
         }
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -2743,7 +3059,10 @@ const GameApp = (() => {
         btn.setAttribute('aria-pressed', String(this.trainingConfig.stageId === stage.id));
         const titleEl = document.createElement('span');
         titleEl.className = 'stage-card-title';
-        titleEl.textContent = `关卡 ${stage.id} · ${stage.shortName}`;
+        titleEl.textContent = I18n.t('train.stageCardTitle', {
+          id: stage.id,
+          name: I18n.field(stage, 'shortName'),
+        });
         const metaEl = document.createElement('span');
         metaEl.className = 'stage-card-meta';
         metaEl.textContent = metaText;
@@ -2782,48 +3101,58 @@ const GameApp = (() => {
         if (sub === 'timed') {
           const dur = String(this.trainingConfig.timedDuration || 60);
           const slot = (rec.timed && rec.timed[dur]) || { bestScore: 0, bestKills: 0 };
-          this.trainBestStrip.innerHTML = `<span>${dur}秒档个人最佳</span><strong>${slot.bestScore} 分 · 击毁 ${slot.bestKills}</strong>`;
+          this.trainBestStrip.innerHTML = I18n.t('train.best.timedHtml', {
+            dur,
+            score: slot.bestScore,
+            kills: slot.bestKills,
+          });
         } else if (sub === 'endless') {
           const e = rec.endless || { bestWave: 0, bestKills: 0, bestTime: 0 };
-          const waveTxt = e.bestWave > 0 ? `第 ${e.bestWave} 波` : '暂无波次';
-          this.trainBestStrip.innerHTML = `<span>无尽历史最佳</span><strong>${waveTxt} · 击杀 ${e.bestKills} · ${this._formatDuration(e.bestTime)}</strong>`;
+          const waveTxt = e.bestWave > 0
+            ? I18n.t('train.best.waveNum', { wave: e.bestWave })
+            : I18n.t('train.best.noWave');
+          this.trainBestStrip.innerHTML = I18n.t('train.best.endlessHtml', {
+            waveTxt,
+            kills: e.bestKills,
+            time: this._formatDuration(e.bestTime),
+          });
         } else {
           const sid = String(this.trainingConfig.stageId || 1);
           const s = (rec.stages && rec.stages[sid]) || { cleared: false, practiceCleared: false, bestTime: null };
-          let txt = '尚未通关';
+          let txt = I18n.t('train.stageNotCleared');
           if (s.bestTime !== null && s.bestTime !== undefined) {
-            txt = `最快 ${this._formatDuration(s.bestTime, true)}`;
+            txt = I18n.t('train.best.stageFastest', { time: this._formatDuration(s.bestTime, true) });
           } else if (s.practiceCleared) {
-            txt = '仅演练通关';
+            txt = I18n.t('train.best.stagePracticeOnly');
           }
-          this.trainBestStrip.innerHTML = `<span>关卡 ${sid} 战绩</span><strong>${txt}</strong>`;
+          this.trainBestStrip.innerHTML = I18n.t('train.best.stageHtml', { id: sid, txt });
         }
       }
 
       if (this.btnTrainStart) {
         this.btnTrainStart.textContent = sub === 'timed'
-          ? '开始限时打靶（锁定视角）'
+          ? I18n.t('train.startTimed')
           : sub === 'endless'
-            ? '开始无尽波次（锁定视角）'
-            : `开始关卡 ${this.trainingConfig.stageId}（锁定视角）`;
+            ? I18n.t('train.startEndless')
+            : I18n.t('train.startStage', { id: this.trainingConfig.stageId });
       }
     }
 
     _applyPauseDialogCopy() {
       if (this.tutorial.active) {
-        this.dlgTitle.textContent = '战术暂停（新手教程）';
-        this.dlgDesc.textContent = '可继续当前新手演练，或随时跳过教程直接投入 04 号码头实战。';
+        this.dlgTitle.textContent = I18n.t('app.pause.tutTitle');
+        this.dlgDesc.textContent = I18n.t('app.pause.tutDesc');
       } else if (this.activeMode === 'training' && this.training.active) {
         const sub = this.training.submode;
         this.dlgTitle.textContent = sub === 'timed'
-          ? '战术暂停（限时打靶训练）'
+          ? I18n.t('app.pause.trainTimedTitle')
           : sub === 'endless'
-            ? '战术暂停（无尽波次防线）'
-            : `战术暂停（关卡练习 ${this.training.stageId}/6）`;
-        this.dlgDesc.textContent = '当前训练进度已冻结。可继续训练、重新开始本项训练，或进入训练中心切换子模式。';
+            ? I18n.t('app.pause.trainEndlessTitle')
+            : I18n.t('app.pause.trainStageTitle', { id: this.training.stageId });
+        this.dlgDesc.textContent = I18n.t('app.pause.trainDesc');
       } else {
-        this.dlgTitle.textContent = '战术暂停';
-        this.dlgDesc.textContent = '调整画质档位、鼠标灵敏度或主音量，随时重返暴雨战场。';
+        this.dlgTitle.textContent = I18n.t('app.pause.combatTitle');
+        this.dlgDesc.textContent = I18n.t('app.pause.combatDesc');
       }
     }
 
@@ -2834,21 +3163,22 @@ const GameApp = (() => {
       if (this.menuViewTraining) this.menuViewTraining.hidden = !isTrain;
 
       if (isTrain) {
-        this.dlgTitle.textContent = '训练中心 // 靶场 · 无尽 · 关卡练习';
-        this.dlgDesc.textContent = '选择限时打靶、无尽波次生存或六大战区专项练习，每项训练独立保存个人最佳战绩。';
+        this.dlgTitle.textContent = I18n.t('app.trainCenter.title');
+        this.dlgDesc.textContent = I18n.t('app.trainCenter.desc');
         this.dlgStats.hidden = true;
         this._syncTrainingUI();
       } else if (this.state === 'MENU') {
-        this.dlgTitle.textContent = '暴雨夜码头 · 战术撤离行动';
-        this.dlgDesc.textContent = '渗透至被机器军团控制的 04 号集装箱码头。任意顺序切断 3 处通信中继器，死守 30 秒倒计时后前往东北泊位登船撤离。';
+        this.dlgTitle.textContent = I18n.t('app.title');
+        this.dlgDesc.textContent = I18n.t('menu.desc');
         this.dlgStats.hidden = true;
       } else if (this.state === 'PAUSED') {
         this._applyPauseDialogCopy();
         this.dlgStats.hidden = true;
-      } else if ((this.state === 'VICTORY' || this.state === 'DEFEAT') && this._lastEndCopy) {
-        this.dlgTitle.textContent = this._lastEndCopy.title;
-        this.dlgDesc.textContent = this._lastEndCopy.desc;
-        this.dlgStats.innerHTML = this._lastEndCopy.statsHtml;
+      } else if ((this.state === 'VICTORY' || this.state === 'DEFEAT') && this._lastDebrief) {
+        const copy = this._renderDebriefCopy(this._lastDebrief);
+        this.dlgTitle.textContent = copy.title;
+        this.dlgDesc.textContent = copy.desc;
+        this.dlgStats.innerHTML = copy.statsHtml;
         this.dlgStats.hidden = false;
       }
     }
@@ -2873,59 +3203,59 @@ const GameApp = (() => {
 
       if (this.state === 'MENU') {
         if (done) {
-          this.btnStart.textContent = '开始实战部署（锁定视角）';
+          this.btnStart.textContent = I18n.t('app.btn.deployLock');
           this.btnStart.dataset.mode = 'combat';
           this.btnStart.dataset.action = 'combat';
-          this.btnSecondary.textContent = '重玩新手教程';
+          this.btnSecondary.textContent = I18n.t('app.btn.replayTutorial');
           this.btnSecondary.dataset.action = 'tutorial';
           this.btnSecondary.hidden = false;
         } else {
-          this.btnStart.textContent = '开始新手教程（推荐）';
+          this.btnStart.textContent = I18n.t('btn.startTutorial');
           this.btnStart.dataset.mode = 'tutorial';
           this.btnStart.dataset.action = 'tutorial';
-          this.btnSecondary.textContent = '直接实战部署';
+          this.btnSecondary.textContent = I18n.t('btn.deployDirect');
           this.btnSecondary.dataset.action = 'combat';
           this.btnSecondary.hidden = false;
         }
         if (this.btnOpenTraining) {
-          this.btnOpenTraining.textContent = '训练模式 · 限时 / 无尽 / 关卡练习';
+          this.btnOpenTraining.textContent = I18n.t('btn.openTraining');
           this.btnOpenTraining.hidden = false;
         }
         if (this.btnReturnMain) this.btnReturnMain.hidden = true;
       } else if (this.state === 'PAUSED') {
         if (this.tutorial.active) {
-          this.btnStart.textContent = '继续新手教程';
+          this.btnStart.textContent = I18n.t('app.btn.resumeTutorial');
           this.btnStart.dataset.mode = 'tutorial';
           this.btnStart.dataset.action = 'resume';
-          this.btnSecondary.textContent = '跳过教程直入实战';
+          this.btnSecondary.textContent = I18n.t('app.btn.skipTutorial');
           this.btnSecondary.dataset.action = 'skip-tutorial';
           this.btnSecondary.hidden = false;
           if (this.btnOpenTraining) {
-            this.btnOpenTraining.textContent = '进入训练中心';
+            this.btnOpenTraining.textContent = I18n.t('app.btn.openTrainingCenter');
             this.btnOpenTraining.hidden = false;
           }
           if (this.btnReturnMain) this.btnReturnMain.hidden = false;
         } else if (inTraining) {
-          this.btnStart.textContent = '继续训练（锁定视角）';
+          this.btnStart.textContent = I18n.t('app.btn.resumeTraining');
           this.btnStart.dataset.mode = 'training';
           this.btnStart.dataset.action = 'resume';
-          this.btnSecondary.textContent = '重开本项训练';
+          this.btnSecondary.textContent = I18n.t('app.btn.restartTraining');
           this.btnSecondary.dataset.action = 'restart-training';
           this.btnSecondary.hidden = false;
           if (this.btnOpenTraining) {
-            this.btnOpenTraining.textContent = '切换训练子模式';
+            this.btnOpenTraining.textContent = I18n.t('app.btn.switchTrainMode');
             this.btnOpenTraining.hidden = false;
           }
           if (this.btnReturnMain) this.btnReturnMain.hidden = false;
         } else {
-          this.btnStart.textContent = '继续战斗（锁定视角）';
+          this.btnStart.textContent = I18n.t('app.btn.resumeCombat');
           this.btnStart.dataset.mode = 'combat';
           this.btnStart.dataset.action = 'resume';
-          this.btnSecondary.textContent = '重新开始任务';
+          this.btnSecondary.textContent = I18n.t('app.btn.restartCombat');
           this.btnSecondary.dataset.action = 'restart-combat';
           this.btnSecondary.hidden = false;
           if (this.btnOpenTraining) {
-            this.btnOpenTraining.textContent = '进入训练中心';
+            this.btnOpenTraining.textContent = I18n.t('app.btn.openTrainingCenter');
             this.btnOpenTraining.hidden = false;
           }
           if (this.btnReturnMain) this.btnReturnMain.hidden = false;
@@ -2934,38 +3264,75 @@ const GameApp = (() => {
         const res = this.lastTrainingResult;
         const canNext = res.submode === 'stage' && res.cleared && Number(res.stageId) < 6;
         if (canNext) {
-          this.btnStart.textContent = `下一关：关卡 ${Number(res.stageId) + 1}/6`;
+          this.btnStart.textContent = I18n.t('app.btn.nextStage', { id: Number(res.stageId) + 1 });
           this.btnStart.dataset.mode = 'training';
           this.btnStart.dataset.action = 'next-stage';
-          this.btnSecondary.textContent = '再战本关';
+          this.btnSecondary.textContent = I18n.t('app.btn.retryStage');
           this.btnSecondary.dataset.action = 'restart-training';
           this.btnSecondary.hidden = false;
         } else {
-          this.btnStart.textContent = '再来一局（本项训练）';
+          this.btnStart.textContent = I18n.t('app.btn.playAgainTraining');
           this.btnStart.dataset.mode = 'training';
           this.btnStart.dataset.action = 'restart-training';
-          this.btnSecondary.textContent = '返回主菜单';
+          this.btnSecondary.textContent = I18n.t('btn.returnMain');
           this.btnSecondary.dataset.action = 'return-main';
           this.btnSecondary.hidden = false;
         }
         if (this.btnOpenTraining) {
-          this.btnOpenTraining.textContent = '切换训练子模式';
+          this.btnOpenTraining.textContent = I18n.t('app.btn.switchTrainMode');
           this.btnOpenTraining.hidden = false;
         }
         if (this.btnReturnMain) this.btnReturnMain.hidden = !canNext;
       } else {
-        this.btnStart.textContent = '再次部署任务';
+        this.btnStart.textContent = I18n.t('app.btn.redeployCombat');
         this.btnStart.dataset.mode = 'combat';
         this.btnStart.dataset.action = 'combat';
-        this.btnSecondary.textContent = '重玩新手教程';
+        this.btnSecondary.textContent = I18n.t('app.btn.replayTutorial');
         this.btnSecondary.dataset.action = 'tutorial';
         this.btnSecondary.hidden = false;
         if (this.btnOpenTraining) {
-          this.btnOpenTraining.textContent = '进入训练中心';
+          this.btnOpenTraining.textContent = I18n.t('app.btn.openTrainingCenter');
           this.btnOpenTraining.hidden = false;
         }
         if (this.btnReturnMain) this.btnReturnMain.hidden = false;
       }
+    }
+
+    _applyLanguage(lang, persist = true) {
+      const nextLang = I18n.setLang(lang, persist);
+      if (!this.userSettings.voiceLang || this.userSettings.voiceLang === 'auto') {
+        this.voice.setVoiceLang(I18n.resolveVoiceLang('auto'));
+      }
+      this.hud._buildCompassLabels();
+      this.hud.invalidateCache(nextLang);
+      this.hud.refreshRadioLanguage();
+      if (this._interactPromptSpec && this.missionState && this.missionState.interactPrompt) {
+        const spec = this._interactPromptSpec;
+        const params = typeof spec.paramsOrFn === 'function' ? spec.paramsOrFn() : spec.paramsOrFn;
+        this.missionState.interactPrompt = I18n.t(spec.key, params);
+      }
+      this._syncLoadoutUI();
+      this._syncTrainingUI();
+      this._setDialogView(this.dialogView);
+      this._syncMenuButtons();
+      if (this.airdropDialog && this.airdropDialog.open && this._pendingAirdropOptions) {
+        this._renderAirdropOptions(this._pendingAirdropOptions, this._pendingAirdropWave);
+      }
+      if (this.state === 'PAUSED' || this.state === 'PLAYING') {
+        this.hud.update(
+          0,
+          this.render.camera,
+          this.player,
+          this.weapon,
+          this.level,
+          this.enemies,
+          this.missionState,
+          this.fpsSmooth,
+          this.tutorial,
+          this.training
+        );
+      }
+      return nextLang;
     }
 
     _handleMenuAction(action) {
@@ -2998,7 +3365,7 @@ const GameApp = (() => {
       } else if (action === 'skip-tutorial') {
         markTutorialDone();
         this._setDialogView('main');
-        this._startCombatMission('已跳过引导，直接切入实战部署！按任意顺序切断 3 处通信中继器！', 'mission_skip');
+        this._startCombatMission(I18n.t('app.radio.missionSkipMenu'), 'mission_skip', 'app.radio.missionSkipMenu');
         this._enterPlay();
       } else if (action === 'start-training' || action === 'restart-training') {
         this._setDialogView('main');
@@ -3041,12 +3408,27 @@ const GameApp = (() => {
           saveUserSettings(this.userSettings);
         });
       }
+      if (this.voiceLangSelect) {
+        this.voiceLangSelect.value = this.userSettings.voiceLang || 'auto';
+        this.voiceLangSelect.addEventListener('change', () => {
+          const val = ['auto', 'zh', 'en'].includes(this.voiceLangSelect.value) ? this.voiceLangSelect.value : 'auto';
+          this.userSettings.voiceLang = val;
+          saveUserSettings(this.userSettings);
+          this.voice.setVoiceLang(I18n.resolveVoiceLang(val));
+        });
+      }
       if (this.voiceModeSelect) {
         this.audio.setVoiceMode(this.voiceModeSelect.value);
         this.voiceModeSelect.addEventListener('change', () => {
           this.audio.setVoiceMode(this.voiceModeSelect.value);
           this.userSettings.voiceMode = this.voiceModeSelect.value;
           saveUserSettings(this.userSettings);
+        });
+      }
+      for (const btn of this.langButtons) {
+        btn.addEventListener('click', () => {
+          const lang = btn.dataset.lang;
+          if (lang) this._applyLanguage(lang, true);
         });
       }
 
@@ -3211,6 +3593,8 @@ const GameApp = (() => {
           const picked = this.airdropDialog.returnValue || this._pendingAirdropDefaultId;
           this.airdropDialog.returnValue = '';
           this._pendingAirdropDefaultId = '';
+          this._pendingAirdropOptions = null;
+          this._pendingAirdropWave = 0;
           if (this.training.active && this.training.submode === 'endless') {
             this.training.applyEndlessAirdrop(picked);
             this._enterPlay();
@@ -3383,6 +3767,130 @@ const GameApp = (() => {
       if (!this.dialog.open) this.dialog.showModal();
     }
 
+    _renderDebriefCopy(debrief) {
+      if (!debrief) return { title: '', desc: '', statsHtml: '' };
+      if (debrief.kind === 'mission') {
+        const {
+          victory,
+          rating,
+          diffId,
+          elapsedTime,
+          alarmsTriggered,
+          killedCount,
+          meleeKills,
+          barrelKills,
+          acc,
+          crits,
+        } = debrief;
+        const mins = Math.floor(elapsedTime / 60);
+        const secs = Math.floor(elapsedTime % 60).toString().padStart(2, '0');
+        const medalCatalog = GameLogic.MEDAL_CATALOG || {};
+        const medalNames = Array.isArray(rating.medalIds) && rating.medalIds.length > 0
+          ? rating.medalIds.map((id) => (medalCatalog[id] ? I18n.field(medalCatalog[id], 'name') : id))
+          : (rating.medals || []);
+        const medalHtml = victory && medalNames.length > 0
+          ? `<div class="medal-row">${medalNames.map((m) => `<span class="medal-pill">★ ${m}</span>`).join('')}</div>`
+          : '';
+        const scoreHtml = victory
+          ? `<span class="rank-badge">${rating.grade}</span> ${rating.score}`
+          : I18n.t('debrief.unranked', { score: rating.score });
+        const diffCfg = GameLogic.getDifficultyConfig(diffId);
+        const title = victory
+          ? I18n.t('debrief.victoryTitle', { grade: rating.grade })
+          : I18n.t('debrief.defeatTitle');
+        const desc = victory ? I18n.t('debrief.victoryDesc') : I18n.t('debrief.defeatDesc');
+        const statsHtml = `
+        <div><span>${I18n.t('debrief.statRankScore')}</span><strong>${scoreHtml}</strong></div>
+        <div><span>${I18n.t('debrief.statDiffMult')}</span><strong>${I18n.field(diffCfg, 'name')} (${diffCfg.scoreMult.toFixed(2)}x)</strong></div>
+        <div><span>${I18n.t('debrief.statTimeAlarms')}</span><strong>${mins}:${secs} / ${I18n.t('debrief.alarmCount', { count: alarmsTriggered })}</strong></div>
+        <div><span>${I18n.t('debrief.statKillsBreak')}</span><strong>${killedCount} / ${meleeKills} / ${barrelKills}</strong></div>
+        <div><span>${I18n.t('debrief.statAccCrits')}</span><strong>${acc}% / ${crits}</strong></div>
+        ${medalHtml}
+      `;
+        return { title, desc, statsHtml };
+      }
+
+      const {
+        sub,
+        cleared,
+        timedDuration,
+        kills,
+        maxCombo,
+        score,
+        critKills,
+        acc,
+        wave,
+        elapsedTime,
+        stageId,
+        invulnerable,
+        simulatedHits,
+        noteIds = [],
+        notes = [],
+      } = debrief;
+      const mins = Math.floor(elapsedTime / 60);
+      const secs = Math.floor(elapsedTime % 60).toString().padStart(2, '0');
+      const legacyNoteMap = {
+        best_score: '\u6700\u9ad8\u5206',
+        best_wave: '\u6700\u9ad8\u6ce2\u6b21',
+        best_kills: '\u6700\u9ad8\u51fb\u6740',
+        best_time: '\u6700\u5feb\u901a\u5173',
+      };
+      const badge = (noteId) => (
+        (Array.isArray(noteIds) && noteIds.includes(noteId)) ||
+        (Array.isArray(notes) && legacyNoteMap[noteId] && notes.includes(legacyNoteMap[noteId]))
+          ? `<span class="new-record-badge">${I18n.t('debrief.newRecord')}</span>`
+          : ''
+      );
+
+      if (sub === 'timed') {
+        return {
+          title: I18n.t('train.debrief.timedTitle'),
+          desc: I18n.t('train.debrief.timedDesc', { dur: timedDuration, kills, maxCombo }),
+          statsHtml: `
+          <div><span>${I18n.t('train.debrief.finalScore')}${badge('best_score')}</span><strong>${score}</strong></div>
+          <div><span>${I18n.t('train.debrief.killsCrits')}</span><strong>${kills} / ${critKills}</strong></div>
+          <div><span>${I18n.t('train.debrief.maxCombo')}</span><strong>x${maxCombo}</strong></div>
+          <div><span>${I18n.t('train.debrief.accuracy')}</span><strong>${acc}%</strong></div>
+        `,
+        };
+      }
+      if (sub === 'endless') {
+        return {
+          title: I18n.t('train.debrief.endlessTitle'),
+          desc: I18n.t('train.debrief.endlessDesc', { wave, time: `${mins}:${secs}`, kills }),
+          statsHtml: `
+          <div><span>${I18n.t('train.debrief.waveReached')}${badge('best_wave')}</span><strong>${I18n.t('train.debrief.waveValue', { wave })}</strong></div>
+          <div><span>${I18n.t('train.debrief.totalKills')}${badge('best_kills')}</span><strong>${kills}</strong></div>
+          <div><span>${I18n.t('train.debrief.survivalTime')}</span><strong>${mins}:${secs}</strong></div>
+          <div><span>${I18n.t('train.debrief.critsAcc')}</span><strong>${critKills} / ${acc}%</strong></div>
+        `,
+        };
+      }
+      const st = (GameLogic.TRAINING_STAGES || []).find((s) => s.id === stageId) || GameLogic.TRAINING_STAGES[0];
+      const stName = I18n.field(st, 'name');
+      const title = cleared
+        ? I18n.t('train.debrief.stageClearTitle', { id: st.id })
+        : I18n.t('train.debrief.stageFailTitle', { id: st.id });
+      const desc = (cleared && invulnerable)
+        ? I18n.t('train.debrief.stagePracticeDesc', { name: stName, hits: simulatedHits })
+        : cleared
+          ? I18n.t('train.debrief.stageClearDesc', { name: stName })
+          : I18n.t('train.debrief.stageFailDesc', { name: stName });
+      const modeTxt = invulnerable
+        ? I18n.t('train.debrief.modePractice', { hits: simulatedHits })
+        : I18n.t('train.debrief.modeOfficial');
+      return {
+        title,
+        desc,
+        statsHtml: `
+          <div><span>${I18n.t('train.debrief.stageTime')}${badge('best_time')}</span><strong>${this._formatDuration(elapsedTime, true)}</strong></div>
+          <div><span>${I18n.t('train.debrief.killsCrits')}</span><strong>${kills} / ${critKills}</strong></div>
+          <div><span>${I18n.t('train.debrief.accuracy')}</span><strong>${acc}%</strong></div>
+          <div><span>${I18n.t('train.debrief.challengeMode')}</span><strong>${modeTxt}</strong></div>
+        `,
+      };
+    }
+
     _endMission(victory) {
       this.state = victory ? 'VICTORY' : 'DEFEAT';
       this._gPlantedC4ThisPress = false;
@@ -3402,8 +3910,6 @@ const GameApp = (() => {
       const acc = this.weapon.stats.shotsFired > 0
         ? Math.round((this.weapon.stats.shotsHit / this.weapon.stats.shotsFired) * 100)
         : 0;
-      const mins = Math.floor(this.elapsedTime / 60);
-      const secs = Math.floor(this.elapsedTime % 60).toString().padStart(2, '0');
 
       const rating = GameLogic.computeMissionRating({
         elapsedSec: this.elapsedTime,
@@ -3426,36 +3932,28 @@ const GameApp = (() => {
         score: rating.score,
         elapsedSec: this.elapsedTime,
         medals: rating.medals,
+        medalIds: rating.medalIds,
       });
       this.careerProfile = careerRes.nextProfile;
       saveCareerProfile(this.careerProfile);
 
-      this.dlgTitle.textContent = victory ? `撤离成功 // 评级 ${rating.grade}` : '任务失败 // 行动中止';
-      this.dlgDesc.textContent = victory
-        ? '你成功瘫痪码头通信网并守住撤离倒计时突破机器封锁，顺利登上撤离快艇！'
-        : '生命体征归零。敌方巡防机械部队已封锁该区域。';
-
-      const medalHtml = victory && rating.medals.length > 0
-        ? `<div class="medal-row">${rating.medals.map((m) => `<span class="medal-pill">★ ${m}</span>`).join('')}</div>`
-        : '';
-      const scoreHtml = victory
-        ? `<span class="rank-badge">${rating.grade}</span> ${rating.score}`
-        : `未评级 (${rating.score})`;
-      const diffCfg = GameLogic.getDifficultyConfig(this.missionState.difficulty || this.loadoutConfig.difficulty);
-
-      this.dlgStats.innerHTML = `
-        <div><span>行动评级 / 评分</span><strong>${scoreHtml}</strong></div>
-        <div><span>行动难度 / 倍率</span><strong>${diffCfg.name} (${diffCfg.scoreMult.toFixed(2)}x)</strong></div>
-        <div><span>用时 / 警报次数</span><strong>${mins}:${secs} / ${this.missionState.alarmsTriggered || 0}次</strong></div>
-        <div><span>击毁 / 暗杀 / 爆桶</span><strong>${this.enemies.killedCount} / ${this.missionState.meleeKills || 0} / ${this.missionState.barrelKills || 0}</strong></div>
-        <div><span>命中率 / 暴击</span><strong>${acc}% / ${this.weapon.stats.crits}</strong></div>
-        ${medalHtml}
-      `;
-      this._lastEndCopy = {
-        title: this.dlgTitle.textContent,
-        desc: this.dlgDesc.textContent,
-        statsHtml: this.dlgStats.innerHTML,
+      this._lastDebrief = {
+        kind: 'mission',
+        victory: !!victory,
+        rating,
+        diffId: this.missionState.difficulty || this.loadoutConfig.difficulty,
+        elapsedTime: this.elapsedTime,
+        alarmsTriggered: this.missionState.alarmsTriggered || 0,
+        killedCount: this.enemies.killedCount,
+        meleeKills: this.missionState.meleeKills || 0,
+        barrelKills: this.missionState.barrelKills || 0,
+        acc,
+        crits: this.weapon.stats.crits,
       };
+      const copy = this._renderDebriefCopy(this._lastDebrief);
+      this.dlgTitle.textContent = copy.title;
+      this.dlgDesc.textContent = copy.desc;
+      this.dlgStats.innerHTML = copy.statsHtml;
       this.dlgStats.hidden = false;
       this._setDialogView('main');
       this._syncMenuButtons();
@@ -3463,27 +3961,45 @@ const GameApp = (() => {
 
       if (victory && rating.grade === 'S') {
         this.hud.showRadio(
-          '撤离一号 // S级完美行动',
-          '特遣队长确认：S 级完美撤离评定！整个 04 号码头行动已被总部收录为最高机密战例！',
+          I18n.t('debrief.speaker.rankS'),
+          I18n.t('debrief.radio.rankS'),
           6.8,
           false,
-          { voiceId: 'mission_rank_s', role: 'evac', priority: 3 }
+          {
+            voiceId: 'mission_rank_s',
+            role: 'evac',
+            priority: 3,
+            speakerKey: 'debrief.speaker.rankS',
+            textKey: 'debrief.radio.rankS',
+          }
         );
       } else if (victory) {
         this.hud.showRadio(
-          '撤离一号 // EVAC-01',
-          '全员登船确认！撤离快艇正在驶离 04 号码头，行动圆满成功！',
+          I18n.t('app.speaker.evac'),
+          I18n.t('debrief.radio.victory'),
           6.5,
           false,
-          { voiceId: 'mission_victory', role: 'evac', priority: 3 }
+          {
+            voiceId: 'mission_victory',
+            role: 'evac',
+            priority: 3,
+            speakerKey: 'app.speaker.evac',
+            textKey: 'debrief.radio.victory',
+          }
         );
       } else {
         this.hud.showRadio(
-          '守望者 // 频道 04',
-          '失去特遣队员生命信号，04 号码头撤离行动中止。',
+          I18n.t('app.speaker.watcher'),
+          I18n.t('debrief.radio.defeat'),
           6.0,
           false,
-          { voiceId: 'mission_defeat', role: 'watcher', priority: 3 }
+          {
+            voiceId: 'mission_defeat',
+            role: 'watcher',
+            priority: 3,
+            speakerKey: 'app.speaker.watcher',
+            textKey: 'debrief.radio.defeat',
+          }
         );
       }
     }
@@ -3512,8 +4028,6 @@ const GameApp = (() => {
       const acc = this.weapon.stats.shotsFired > 0
         ? Math.round((this.weapon.stats.shotsHit / this.weapon.stats.shotsFired) * 100)
         : 0;
-      const mins = Math.floor(this.elapsedTime / 60);
-      const secs = Math.floor(this.elapsedTime % 60).toString().padStart(2, '0');
 
       let payload;
       if (sub === 'timed') {
@@ -3548,87 +4062,103 @@ const GameApp = (() => {
         ...payload,
         isNewRecord: recResult.isNewRecord,
         notes: recResult.notes,
+        noteIds: recResult.noteIds || [],
       };
 
-      const badge = (label) => (recResult.notes.includes(label) ? '<span class="new-record-badge">新纪录</span>' : '');
+      this._lastDebrief = {
+        kind: 'training',
+        sub,
+        cleared: !!cleared,
+        timedDuration: this.training.timedDuration,
+        kills: this.training.kills,
+        maxCombo: this.training.maxCombo,
+        score: this.training.score,
+        critKills: this.training.critKills,
+        acc,
+        wave: this.training.wave,
+        elapsedTime: this.elapsedTime,
+        stageId: this.training.stageId,
+        invulnerable: !!this.training.invulnerable,
+        simulatedHits: this.player.simulatedHits,
+        noteIds: recResult.noteIds || [],
+        notes: recResult.notes || [],
+      };
+
+      const copy = this._renderDebriefCopy(this._lastDebrief);
+      this.dlgTitle.textContent = copy.title;
+      this.dlgDesc.textContent = copy.desc;
+      this.dlgStats.innerHTML = copy.statsHtml;
 
       if (sub === 'timed') {
-        this.dlgTitle.textContent = '限时打靶结算 // 训练完成';
-        this.dlgDesc.textContent = `${this.training.timedDuration} 秒靶场冲刺结束！累计击毁 ${this.training.kills} 个移动靶，最高连击 ${this.training.maxCombo} 连。`;
-        this.dlgStats.innerHTML = `
-          <div><span>最终得分${badge('最高分')}</span><strong>${this.training.score}</strong></div>
-          <div><span>击毁 / 暴击</span><strong>${this.training.kills} / ${this.training.critKills}</strong></div>
-          <div><span>最高连击</span><strong>x${this.training.maxCombo}</strong></div>
-          <div><span>命中率</span><strong>${acc}%</strong></div>
-        `;
+        const tScore = this.training.score;
+        const tKills = this.training.kills;
         this.hud.showRadio(
-          '教官 // 限时打靶',
-          `限时打靶结束，总得分 ${this.training.score} 分，击毁 ${this.training.kills} 个目标！`,
+          I18n.t('train.speaker.timed'),
+          I18n.t('train.debrief.timedRadio', { score: tScore, kills: tKills }),
           5.5,
           false,
-          { voiceId: 'train_timed_end', role: 'instructor', priority: 3 }
+          {
+            voiceId: 'train_timed_end',
+            role: 'instructor',
+            priority: 3,
+            speakerKey: 'train.speaker.timed',
+            textKey: 'train.debrief.timedRadio',
+            textParams: { score: tScore, kills: tKills },
+          }
         );
       } else if (sub === 'endless') {
-        this.dlgTitle.textContent = '无尽防线结算 // 阵亡撤出';
-        this.dlgDesc.textContent = `你在第 ${this.training.wave} 波机器集群攻势下坚守 ${mins}:${secs}，累计消灭 ${this.training.kills} 台敌机。`;
-        this.dlgStats.innerHTML = `
-          <div><span>抵达波次${badge('最高波次')}</span><strong>第 ${this.training.wave} 波</strong></div>
-          <div><span>总击杀数${badge('最高击杀')}</span><strong>${this.training.kills}</strong></div>
-          <div><span>存活时间</span><strong>${mins}:${secs}</strong></div>
-          <div><span>暴击 / 命中</span><strong>${this.training.critKills} / ${acc}%</strong></div>
-        `;
+        const eWave = this.training.wave;
+        const eKills = this.training.kills;
         this.hud.showRadio(
-          '守望者 // 频道 04',
-          `无尽波次防线已失守，最终抵达第 ${this.training.wave} 波，累计消灭 ${this.training.kills} 台敌机。`,
+          I18n.t('app.speaker.watcher'),
+          I18n.t('train.debrief.endlessRadio', { wave: eWave, kills: eKills }),
           5.8,
           false,
-          { voiceId: 'mission_defeat', role: 'watcher', priority: 3 }
+          {
+            voiceId: 'mission_defeat',
+            role: 'watcher',
+            priority: 3,
+            speakerKey: 'app.speaker.watcher',
+            textKey: 'train.debrief.endlessRadio',
+            textParams: { wave: eWave, kills: eKills },
+          }
         );
       } else {
         const st = this.training.stage || GameLogic.TRAINING_STAGES[0];
-        this.dlgTitle.textContent = cleared
-          ? `关卡练习 ${st.id}/6 // 通关完成`
-          : `关卡练习 ${st.id}/6 // 行动失败`;
-        if (cleared && this.training.invulnerable) {
-          this.dlgDesc.textContent = `「${st.name}」演练路线完成！（已开启无伤防阵亡，模拟受击 ${this.player.simulatedHits} 次；未计入正式最快用时）`;
-        } else if (cleared) {
-          this.dlgDesc.textContent = `成功攻克「${st.name}」，干净利落地完成了战区专项目标！`;
-        } else {
-          this.dlgDesc.textContent = `你在「${st.name}」战区中阵亡。可复盘路线、开启无伤练路线或再次挑战！`;
-        }
-        const modeTxt = this.training.invulnerable
-          ? `演练(受击${this.player.simulatedHits})`
-          : '正式挑战';
-        this.dlgStats.innerHTML = `
-          <div><span>关卡用时${badge('最快通关')}</span><strong>${this._formatDuration(this.elapsedTime, true)}</strong></div>
-          <div><span>击毁 / 暴击</span><strong>${this.training.kills} / ${this.training.critKills}</strong></div>
-          <div><span>命中率</span><strong>${acc}%</strong></div>
-          <div><span>挑战模式</span><strong>${modeTxt}</strong></div>
-        `;
         if (cleared) {
           this.hud.showRadio(
-            `教官 // 关卡练习 ${st.id}/6`,
-            `关卡「${st.shortName}」专项训练完成！实战节奏与切入路线已校准。`,
+            I18n.t('train.speaker.stage', { id: st.id }),
+            I18n.t('train.debrief.stageClearRadio', { name: I18n.field(st, 'shortName') }),
             5.5,
             false,
-            { voiceId: 'train_stage_clear', role: 'instructor', priority: 3 }
+            {
+              voiceId: 'train_stage_clear',
+              role: 'instructor',
+              priority: 3,
+              speakerKey: 'train.speaker.stage',
+              speakerParams: { id: st.id },
+              textKey: 'train.debrief.stageClearRadio',
+              getTextParams: () => ({ name: I18n.field(st, 'shortName') }),
+            }
           );
         } else {
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            `关卡练习「${st.shortName}」行动失败，重整装备后再战。`,
+            I18n.t('app.speaker.watcher'),
+            I18n.t('train.debrief.stageFailRadio', { name: I18n.field(st, 'shortName') }),
             5.2,
             false,
-            { voiceId: 'mission_defeat', role: 'watcher', priority: 3 }
+            {
+              voiceId: 'mission_defeat',
+              role: 'watcher',
+              priority: 3,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'train.debrief.stageFailRadio',
+              getTextParams: () => ({ name: I18n.field(st, 'shortName') }),
+            }
           );
         }
       }
 
-      this._lastEndCopy = {
-        title: this.dlgTitle.textContent,
-        desc: this.dlgDesc.textContent,
-        statsHtml: this.dlgStats.innerHTML,
-      };
       this.dlgStats.hidden = false;
       this._setDialogView('main');
       this._syncMenuButtons();
@@ -3659,7 +4189,8 @@ const GameApp = (() => {
       this.elapsedTime = 0;
       this.activeMode = 'combat';
       this.lastTrainingResult = null;
-      this._lastEndCopy = null;
+      this._lastDebrief = null;
+      this._interactPromptSpec = null;
       this.state = 'MENU';
       this.dlgStats.hidden = true;
       if (this.disclosureLoadout) this.disclosureLoadout.open = false;
@@ -3699,7 +4230,8 @@ const GameApp = (() => {
     _startTutorial() {
       this.activeMode = 'tutorial';
       this.lastTrainingResult = null;
-      this._lastEndCopy = null;
+      this._lastDebrief = null;
+      this._interactPromptSpec = null;
       this.training.stop();
       this.tutorial.start();
     }
@@ -3707,24 +4239,27 @@ const GameApp = (() => {
     skipTutorial() {
       if (!this.tutorial.active || this.state !== 'PLAYING') return;
       markTutorialDone();
-      this._startCombatMission('已跳过新手引导，直接切入 04 号码头实战！按任意顺序切断 3 处通信中继器！', 'mission_skip');
+      this._startCombatMission(I18n.t('app.radio.missionSkip'), 'mission_skip', 'app.radio.missionSkip');
     }
 
     _startTraining(submode = this.trainingConfig.submode, config = this.trainingConfig) {
       this.activeMode = 'training';
       this.lastTrainingResult = null;
-      this._lastEndCopy = null;
+      this._lastDebrief = null;
+      this._interactPromptSpec = null;
       this.trainingConfig.submode = submode;
       this.training.start(submode, config);
     }
 
     _startCombatMission(
-      radioMessage = '风暴已掩护你渗入 04 号码头。潜行无声黑入 [E] 或直接爆破 [G] 切断全部 3 处通信中继器！',
-      voiceId = 'mission_start'
+      radioMessage = null,
+      voiceId = 'mission_start',
+      radioTextKey = 'app.radio.missionStart'
     ) {
       this.activeMode = 'combat';
       this.lastTrainingResult = null;
-      this._lastEndCopy = null;
+      this._lastDebrief = null;
+      this._interactPromptSpec = null;
       this.tutorial.stop();
       this.training.stop();
       this.audio.stopRelayCutLoop();
@@ -3762,11 +4297,25 @@ const GameApp = (() => {
       };
       this.audio.setMusicMode('stealth');
       this.audio.playRadioBeep();
-      this.hud.showRadio('守望者 // 频道 04', radioMessage, 6.8, false, { voiceId, role: 'watcher', priority: 3 });
+      const textKey = radioTextKey || 'app.radio.missionStart';
+      const resolvedMsg = radioMessage !== null && radioMessage !== undefined ? radioMessage : I18n.t(textKey);
+      this.hud.showRadio(
+        I18n.t('app.speaker.watcher'),
+        resolvedMsg,
+        6.8,
+        false,
+        {
+          voiceId,
+          role: 'watcher',
+          priority: 3,
+          speakerKey: 'app.speaker.watcher',
+          textKey,
+        }
+      );
     }
 
     _restartMission() {
-      this._startCombatMission('已重新部署至南侧防波堤。切断全部 3 处中继器后向东北码头撤离！', 'mission_restart');
+      this._startCombatMission(I18n.t('app.radio.missionRestart'), 'mission_restart', 'app.radio.missionRestart');
     }
 
     _triggerTacticalScan() {
@@ -3854,11 +4403,18 @@ const GameApp = (() => {
       this.missionState.alarmsTriggered = (this.missionState.alarmsTriggered || 0) + 1;
       this.audio.playAlarmKlaxon(2);
       this.hud.showRadio(
-        '守望者 // 频道 04',
-        '潜行暴露！敌方警报发报已接通，码头巡防进入全面交火状态！',
+        I18n.t('app.speaker.watcher'),
+        I18n.t('app.radio.alarmTriggered'),
         4.6,
         false,
-        { voiceId: 'alarm_compromised', role: 'watcher', priority: 2, cooldownSec: 20 }
+        {
+          voiceId: 'alarm_compromised',
+          role: 'watcher',
+          priority: 2,
+          cooldownSec: 20,
+          speakerKey: 'app.speaker.watcher',
+          textKey: 'app.radio.alarmTriggered',
+        }
       );
     }
 
@@ -3878,8 +4434,19 @@ const GameApp = (() => {
       }));
     }
 
+    _setInteractPrompt(key, paramsOrFn = null) {
+      if (!key) {
+        this._interactPromptSpec = null;
+        this.missionState.interactPrompt = '';
+        return;
+      }
+      this._interactPromptSpec = { key, paramsOrFn };
+      const params = typeof paramsOrFn === 'function' ? paramsOrFn() : paramsOrFn;
+      this.missionState.interactPrompt = I18n.t(key, params);
+    }
+
     _updateInteraction(dt) {
-      this.missionState.interactPrompt = '';
+      this._setInteractPrompt('');
       const pPos = this.player.pos;
       const holdingE = !!this.player.keys['KeyE'];
 
@@ -3887,7 +4454,7 @@ const GameApp = (() => {
       if (this.tutorial.active) {
         if (this.tutorial.step === 5 && this.level.tutorialAmmoCrate) {
           if (pPos.distanceTo(this.level.tutorialAmmoCrate.pos) < 2.8) {
-            this.missionState.interactPrompt = '按 [E] 补满 EMP / 破片战术投掷物';
+            this._setInteractPrompt('tut.interact.crate');
             this.missionState.interactProgress = 0;
             if (holdingE && ((this.weapon.throwables.emp || 0) < 3 || (this.weapon.throwables.frag || 0) < 3)) {
               this.weapon.throwables.emp = 3;
@@ -3899,7 +4466,7 @@ const GameApp = (() => {
         }
         if (this.tutorial.step === 7 && this.level.tutorialMedkit && !this.level.tutorialMedkit.used) {
           if (pPos.distanceTo(this.level.tutorialMedkit.pos) < 3.0) {
-            this.missionState.interactPrompt = '按 [E] 使用演练医疗箱 (恢复满生命)';
+            this._setInteractPrompt('tut.interact.medkit');
             this.missionState.interactProgress = 0;
             if (holdingE) {
               this.level.tutorialMedkit.used = true;
@@ -3914,7 +4481,7 @@ const GameApp = (() => {
         if (this.tutorial.step === 8 && this.level.tutorialRelay && !this.level.tutorialRelay.severed && !this.level.tutorialRelay.c4Planted) {
           const sim = this.level.tutorialRelay;
           if (pPos.distanceTo(sim.pos) < 3.4) {
-            this.missionState.interactPrompt = '长按 [E] 无声黑入 或 按 [G] 贴 C4 强爆模拟中继器';
+            this._setInteractPrompt('tut.interact.simRelay');
             if (holdingE) {
               this.missionState.interactProgress = Math.min(1, this.missionState.interactProgress + dt / 1.45);
               this.audio.updateRelayCutLoop(this.missionState.interactProgress);
@@ -3947,7 +4514,7 @@ const GameApp = (() => {
       // 1. 医疗补给箱（按 E 瞬间恢复）
       for (const crate of this.level.supplyCrates) {
         if (!crate.used && pPos.distanceTo(crate.pos) < 2.6 && this.player.hp < this.player.maxHp) {
-          this.missionState.interactPrompt = '按 [E] 使用应急医疗箱 (+45 HP)';
+          this._setInteractPrompt('app.interact.medkit');
           this.missionState.interactProgress = 0;
           if (holdingE) {
             crate.used = true;
@@ -3955,11 +4522,19 @@ const GameApp = (() => {
             this.player.heal(45);
             this.audio.playSwitchClick();
             this.hud.showRadio(
-              '守望者 // 频道 04',
-              '应急医疗箱已注入，生命体征回升。',
+              I18n.t('app.speaker.watcher'),
+              I18n.t('app.radio.medkitUsed'),
               3.8,
               false,
-              { voiceId: 'tac_medkit', role: 'watcher', priority: 1, cooldownSec: 10, tacOnly: true }
+              {
+                voiceId: 'tac_medkit',
+                role: 'watcher',
+                priority: 1,
+                cooldownSec: 10,
+                tacOnly: true,
+                speakerKey: 'app.speaker.watcher',
+                textKey: 'app.radio.medkitUsed',
+              }
             );
           }
           return;
@@ -3969,7 +4544,7 @@ const GameApp = (() => {
       // 2. 战术弹药补给箱（补充备弹与手雷，30秒冷却再生）
       for (const ac of this.level.ammoCrates) {
         if (ac.cooldown <= 0 && pPos.distanceTo(ac.pos) < 2.6) {
-          this.missionState.interactPrompt = '按 [E] 补满战术弹药与手雷';
+          this._setInteractPrompt('app.interact.ammoCrate');
           this.missionState.interactProgress = 0;
           if (holdingE) {
             ac.cooldown = 30.0;
@@ -3977,11 +4552,19 @@ const GameApp = (() => {
             ac.light.intensity = 0.5;
             this.weapon.refillAmmo();
             this.hud.showRadio(
-              '守望者 // 频道 04',
-              '主副武器弹匣与战术手雷已补满！',
+              I18n.t('app.speaker.watcher'),
+              I18n.t('app.radio.ammoResupplied'),
               3.6,
               false,
-              { voiceId: 'ammo_crate_resupply', role: 'watcher', priority: 1, cooldownSec: 12, tacOnly: true }
+              {
+                voiceId: 'ammo_crate_resupply',
+                role: 'watcher',
+                priority: 1,
+                cooldownSec: 12,
+                tacOnly: true,
+                speakerKey: 'app.speaker.watcher',
+                textKey: 'app.radio.ammoResupplied',
+              }
             );
           }
           return;
@@ -3996,17 +4579,25 @@ const GameApp = (() => {
           pPos.distanceTo(br.pos) < 2.6 &&
           this.level.collision.hasLineOfSight(interactEye, br.pos)
         ) {
-          this.missionState.interactPrompt = `按 [E] 静默切断 ${br.label}`;
+          const getBreakerLabel = () => I18n.field(br, 'label') || I18n.field(br, 'name') || br.id;
+          this._setInteractPrompt('app.interact.breaker', () => ({ label: getBreakerLabel() }));
           this.missionState.interactProgress = 0;
           if (holdingE) {
             this.level.triggerBreaker(br);
             this.audio.playSwitchClick();
             this.hud.showRadio(
-              '守望者 // 频道 04',
-              `${br.label} 已断电！利用黑暗与掩体无声潜行。`,
+              I18n.t('app.speaker.watcher'),
+              I18n.t('app.radio.breakerTripped', { label: getBreakerLabel() }),
               3.8,
               false,
-              { role: 'watcher', priority: 1, cooldownSec: 6 }
+              {
+                role: 'watcher',
+                priority: 1,
+                cooldownSec: 6,
+                speakerKey: 'app.speaker.watcher',
+                textKey: 'app.radio.breakerTripped',
+                getTextParams: () => ({ label: getBreakerLabel() }),
+              }
             );
           }
           return;
@@ -4017,7 +4608,7 @@ const GameApp = (() => {
       if (!this.training.isTimedSafe() && !(this.training.active && this.training.submode === 'endless')) {
         for (const relay of this.level.relays) {
           if (!relay.severed && !relay.disabledByMode && !relay.c4Planted && pPos.distanceTo(relay.pos) < 3.4) {
-            this.missionState.interactPrompt = `长按 [E] 无声黑入 ${relay.id} · 按 [G] 贴 C4 强破`;
+            this._setInteractPrompt('app.interact.relay', { id: relay.id });
             if (holdingE) {
               this.missionState.interactProgress = Math.min(1, this.missionState.interactProgress + dt / 2.25);
               this.audio.updateRelayCutLoop(this.missionState.interactProgress);
@@ -4043,30 +4634,46 @@ const GameApp = (() => {
         if (!this.missionState.evacApproached && pPos.x > 13 && pPos.z < -14) {
           this.missionState.evacApproached = true;
           this.hud.showRadio(
-            '撤离一号 // EVAC-01',
-            '已锁定你的位置！撤离快艇正在靠泊东北栈桥，守住防线！',
+            I18n.t('app.speaker.evac'),
+            I18n.t('app.radio.evacApproach'),
             4.6,
             false,
-            { voiceId: 'tac_evac_approach', role: 'evac', priority: 2, cooldownSec: 60, tacOnly: true }
+            {
+              voiceId: 'tac_evac_approach',
+              role: 'evac',
+              priority: 2,
+              cooldownSec: 60,
+              tacOnly: true,
+              speakerKey: 'app.speaker.evac',
+              textKey: 'app.radio.evacApproach',
+            }
           );
         }
         if (pPos.distanceTo(this.level.extraction.pos) < 3.8) {
           if (this.missionState.phase === 'EVAC_HOLDOUT') {
-            this.missionState.interactPrompt = `死守撤离区！锚链解锁倒计时 ${(this.missionState.holdoutTimer || 0).toFixed(1)}s`;
+            this._setInteractPrompt('app.interact.holdoutWait', () => ({ sec: (this.missionState.holdoutTimer || 0).toFixed(1) }));
             this.missionState.interactProgress = 0;
             this.audio.stopRelayCutLoop();
             return;
           }
-          this.missionState.interactPrompt = '长按 [E] 登上撤离快艇';
+          this._setInteractPrompt('app.interact.boardBoat');
           if (holdingE) {
             if (!this.missionState.evacBoardingSpoken) {
               this.missionState.evacBoardingSpoken = true;
               this.hud.showRadio(
-                '撤离一号 // EVAC-01',
-                '撤离锚链解锁中，掩护好自己，马上起航！',
+                I18n.t('app.speaker.evac'),
+                I18n.t('app.radio.evacBoarding'),
                 4.2,
                 false,
-                { voiceId: 'tac_evac_boarding', role: 'evac', priority: 2, cooldownSec: 30, tacOnly: true }
+                {
+                  voiceId: 'tac_evac_boarding',
+                  role: 'evac',
+                  priority: 2,
+                  cooldownSec: 30,
+                  tacOnly: true,
+                  speakerKey: 'app.speaker.evac',
+                  textKey: 'app.radio.evacBoarding',
+                }
               );
             }
             this.missionState.interactProgress = Math.min(1, this.missionState.interactProgress + dt / 1.35);
@@ -4111,44 +4718,66 @@ const GameApp = (() => {
         this.missionState.alarmsTriggered = (this.missionState.alarmsTriggered || 0) + 1;
       }
 
-      if (this.missionState.severedCount < 3) {
+      const getRelayName = () => I18n.field(relay, 'name') || relay.id;
+      const sevCount = this.missionState.severedCount;
+
+      if (sevCount < 3) {
         if (method === 'c4') {
           this.audio.playAlarmKlaxon(2);
           this.enemies.spawnRelayInterceptor(relay.pos, this._buildEnemyDiffOpts(diffCfg, {
-            withShield: this.missionState.severedCount >= 2,
+            withShield: sevCount >= 2,
           }));
           this.audio.playRadioBeep();
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            `${relay.name} 已被 C4 爆破 (${this.missionState.severedCount}/3)！敌方防爆重装与机械犬拦截队已逼近！`,
+            I18n.t('app.speaker.watcher'),
+            I18n.t('app.radio.relayC4', { name: getRelayName(), count: sevCount }),
             5.8,
             false,
-            { voiceId: 'relay_c4_loud', role: 'watcher', priority: 3 }
+            {
+              voiceId: 'relay_c4_loud',
+              role: 'watcher',
+              priority: 3,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'app.radio.relayC4',
+              getTextParams: () => ({ name: getRelayName(), count: sevCount }),
+            }
           );
         } else if ((this.missionState.alarmsTriggered || 0) === 0) {
           this.audio.playRadioBeep();
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            `${relay.name} 已无声切断 (${this.missionState.severedCount}/3)！完美静默侵入，警戒网尚未察觉，继续保持！`,
+            I18n.t('app.speaker.watcher'),
+            I18n.t('app.radio.relayStealth', { name: getRelayName(), count: sevCount }),
             5.4,
             false,
-            { voiceId: 'relay_stealth_clean', role: 'watcher', priority: 3 }
+            {
+              voiceId: 'relay_stealth_clean',
+              role: 'watcher',
+              priority: 3,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'app.radio.relayStealth',
+              getTextParams: () => ({ name: getRelayName(), count: sevCount }),
+            }
           );
         } else {
           this.enemies.spawnRelayInterceptor(relay.pos, this._buildEnemyDiffOpts(diffCfg, {
-            withShield: this.missionState.severedCount >= 2,
+            withShield: sevCount >= 2,
           }));
           this.audio.playRadioBeep();
-          const voiceId = `relay_${relay.id}_${this.missionState.severedCount}`;
-          const msg = this.missionState.severedCount === 2
-            ? `${relay.name} 已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！`
-            : `${relay.name} 已切断 (1/3)！敌方警戒拦截队正在赶往该区！`;
+          const voiceId = `relay_${relay.id}_${sevCount}`;
+          const textKey = sevCount === 2 ? 'app.radio.relayTwo' : 'app.radio.relayOne';
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            msg,
+            I18n.t('app.speaker.watcher'),
+            I18n.t(textKey, { name: getRelayName() }),
             5.6,
             false,
-            { voiceId, role: 'watcher', priority: 3 }
+            {
+              voiceId,
+              role: 'watcher',
+              priority: 3,
+              speakerKey: 'app.speaker.watcher',
+              textKey,
+              getTextParams: () => ({ name: getRelayName() }),
+            }
           );
         }
       } else {
@@ -4162,11 +4791,17 @@ const GameApp = (() => {
         this.enemies.spawnFinalReinforcements(this._buildEnemyDiffOpts(diffCfg));
         this.audio.playRadioBeep();
         this.hud.showRadio(
-          '撤离一号 // EVAC-01',
-          '全部 3/3 中继器离线！撤离快艇正在靠泊——向东北泊位机动并死守 30 秒等待锚链解锁！',
+          I18n.t('app.speaker.evac'),
+          I18n.t('app.radio.evacHoldoutStart'),
           7.0,
           false,
-          { voiceId: 'evac_holdout_start', role: 'evac', priority: 3 }
+          {
+            voiceId: 'evac_holdout_start',
+            role: 'evac',
+            priority: 3,
+            speakerKey: 'app.speaker.evac',
+            textKey: 'app.radio.evacHoldoutStart',
+          }
         );
       }
     }
@@ -4232,11 +4867,19 @@ const GameApp = (() => {
 
       if (!this.tutorial.active && !this.training.isTimedSafe() && this.state === 'PLAYING' && kills > 0) {
         this.hud.showRadio(
-          '守望者 // 频道 04',
-          '危化油桶已引爆，周边机械单位遭重创！',
+          I18n.t('app.speaker.watcher'),
+          I18n.t('app.radio.barrelKill'),
           4.2,
           false,
-          { voiceId: 'tac_barrel_kill', role: 'watcher', priority: 1, cooldownSec: 10, tacOnly: true }
+          {
+            voiceId: 'tac_barrel_kill',
+            role: 'watcher',
+            priority: 1,
+            cooldownSec: 10,
+            tacOnly: true,
+            speakerKey: 'app.speaker.watcher',
+            textKey: 'app.radio.barrelKill',
+          }
         );
       }
     }
@@ -4246,10 +4889,16 @@ const GameApp = (() => {
       window.__GAME_DEBUG__ = {
         getState() {
           const stealthInfo = app.enemies.getStealthStatus ? app.enemies.getStealthStatus() : { maxState: 'PATROL' };
+          const activeVoicePack = app.voice && app.voice._getPack
+            ? app.voice._getPack(app.voice.voiceLang)
+            : ((window.__VOICE_PACKS__ && window.__VOICE_PACKS__[app.voice.voiceLang]) || window.__VOICE_PACK__);
           return {
             state: app.state,
             activeMode: app.activeMode,
             dialogView: app.dialogView,
+            uiLang: I18n.getLang(),
+            voiceLang: app.voice.voiceLang,
+            voiceLangSetting: app.userSettings.voiceLang,
             fps: Math.round(app.fpsSmooth),
             quality: app.render.quality,
             extremeActive: !!app.render.isExtremeActive,
@@ -4306,11 +4955,14 @@ const GameApp = (() => {
             playerRegenCap: app.player.regenCap,
             voiceSpeaking: app.voice.isSpeaking(),
             voiceMode: app.audio.voiceMode,
-            voicePackLoaded: !!(window.__VOICE_PACK__ && window.__VOICE_PACK__.clips),
-            voiceCount: window.__VOICE_PACK__ && window.__VOICE_PACK__.clips ? Object.keys(window.__VOICE_PACK__.clips).length : 0,
+            voicePackLoaded: !!(activeVoicePack && activeVoicePack.clips),
+            voiceCount: activeVoicePack && activeVoicePack.clips ? Object.keys(activeVoicePack.clips).length : 0,
             trauma: +app.player.trauma.toFixed(2),
             activeBarrels: app.level.barrels.filter((b) => b.state !== 'exploded').length,
           };
+        },
+        setLang(lang, persist = true) {
+          return app._applyLanguage(lang, persist);
         },
         startDirect() {
           app.audio.init();
@@ -4420,11 +5072,17 @@ const GameApp = (() => {
               alertImmediately: true,
             }));
             this.hud.showRadio(
-              '撤离一号 // EVAC-01',
-              '锚链解锁剩余 15 秒！敌方增援压近东北码头，守住最后一波攻势！',
+              I18n.t('app.speaker.evac'),
+              I18n.t('app.radio.holdout15s'),
               4.8,
               false,
-              { voiceId: 'evac_holdout_15s', role: 'evac', priority: 3 }
+              {
+                voiceId: 'evac_holdout_15s',
+                role: 'evac',
+                priority: 3,
+                speakerKey: 'app.speaker.evac',
+                textKey: 'app.radio.holdout15s',
+              }
             );
           }
           if (this.missionState.holdoutTimer <= 0) {
@@ -4432,11 +5090,17 @@ const GameApp = (() => {
             this.audio.playAlarmKlaxon(2);
             this.audio.playRadioBeep();
             this.hud.showRadio(
-              '撤离一号 // EVAC-01',
-              '撤离锚链已全部解锁！全速登上东北栈桥绿色信号处的撤离快艇！',
+              I18n.t('app.speaker.evac'),
+              I18n.t('app.radio.evacUnlocked'),
               6.5,
               false,
-              { voiceId: 'evac_unlocked', role: 'evac', priority: 3 }
+              {
+                voiceId: 'evac_unlocked',
+                role: 'evac',
+                priority: 3,
+                speakerKey: 'app.speaker.evac',
+                textKey: 'app.radio.evacUnlocked',
+              }
             );
           }
         }
@@ -4464,11 +5128,19 @@ const GameApp = (() => {
           this.hud.triggerHitmarker(isCrit, isKill, blockedByShield);
           if (blockedByShield && !this.tutorial.active && !this.training.isTimedSafe()) {
             this.hud.showRadio(
-              '守望者 // 频道 04',
-              '正面防爆盾牌弹反了常规子弹！用 [4]/[G] 切 EMP 瘫痪护盾、穿甲 DMR 或绕后击打散热核！',
+              I18n.t('app.speaker.watcher'),
+              I18n.t('app.radio.shieldWarn'),
               4.8,
               false,
-              { voiceId: 'enemy_shield_warn', role: 'watcher', priority: 2, cooldownSec: 22, tacOnly: true }
+              {
+                voiceId: 'enemy_shield_warn',
+                role: 'watcher',
+                priority: 2,
+                cooldownSec: 22,
+                tacOnly: true,
+                speakerKey: 'app.speaker.watcher',
+                textKey: 'app.radio.shieldWarn',
+              }
             );
           }
           if (isKill && !this.tutorial.active && !this.training.isTimedSafe()) {
@@ -4485,11 +5157,19 @@ const GameApp = (() => {
         if (st.sniperLocking && !this.sniperWarnSpoken && !this.tutorial.active && !this.training.isTimedSafe()) {
           this.sniperWarnSpoken = true;
           this.hud.showRadio(
-            '守望者 // 频道 04',
-            '警告：高台激光狙已锁定你的位置！小心高处红线激光锁定并立即横向机动回避！',
+            I18n.t('app.speaker.watcher'),
+            I18n.t('app.radio.sniperWarn'),
             4.5,
             false,
-            { voiceId: 'enemy_laser_warn', role: 'watcher', priority: 2, cooldownSec: 18, tacOnly: true }
+            {
+              voiceId: 'enemy_laser_warn',
+              role: 'watcher',
+              priority: 2,
+              cooldownSec: 18,
+              tacOnly: true,
+              speakerKey: 'app.speaker.watcher',
+              textKey: 'app.radio.sniperWarn',
+            }
           );
         } else if (!st.sniperLocking) {
           this.sniperWarnSpoken = false;

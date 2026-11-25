@@ -883,7 +883,7 @@ const LevelBuilder = (() => {
       };
     }
 
-    _addBreakerBox(id, label, pos, onTrip, mountSpec = null) {
+    _addBreakerBox(id, label, pos, onTrip, mountSpec = null, labelEn = '') {
       const g = new THREE.Group();
       g.position.copy(pos);
       const box = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.56, 0.24), this.tex.metalFrame);
@@ -912,9 +912,12 @@ const LevelBuilder = (() => {
       this.scene.add(g);
       this.collision.rayMeshes.push(box);
 
+      const resolvedEn = labelEn || (mountSpec && mountSpec.labelEn) || label;
       const breaker = {
         id,
         label,
+        labelEn: resolvedEn,
+        nameEn: resolvedEn,
         pos: pos.clone(),
         group: g,
         mesh: box,
@@ -949,9 +952,9 @@ const LevelBuilder = (() => {
 
     _buildRelays() {
       const specs = [
-        { id: 'A', name: '中继器 A（西侧探照灯堆场）', pos: new THREE.Vector3(-24.0, 0.0, 3.5) },
-        { id: 'B', name: '中继器 B（铁皮仓库内部）', pos: new THREE.Vector3(-15.5, 0.019, -25.5), aerialSkip: true },
-        { id: 'C', name: '中继器 C（龙门吊高台控制）', pos: new THREE.Vector3(17.25, 2.5, 3.2) },
+        { id: 'A', name: '中继器 A（西侧探照灯堆场）', nameEn: 'Relay A (West Searchlight Yard)', pos: new THREE.Vector3(-24.0, 0.0, 3.5) },
+        { id: 'B', name: '中继器 B（铁皮仓库内部）', nameEn: 'Relay B (Sheet-Metal Warehouse)', pos: new THREE.Vector3(-15.5, 0.019, -25.5), aerialSkip: true },
+        { id: 'C', name: '中继器 C（龙门吊高台控制）', nameEn: 'Relay C (Gantry Crane Deck)', pos: new THREE.Vector3(17.25, 2.5, 3.2) },
       ];
 
       for (const spec of specs) {
@@ -1013,6 +1016,7 @@ const LevelBuilder = (() => {
         this.relays.push({
           id: spec.id,
           name: spec.name,
+          nameEn: spec.nameEn,
           pos: spec.pos.clone().add(new THREE.Vector3(0, 1.3, 0)),
           group: g,
           panel,
@@ -1073,7 +1077,8 @@ const LevelBuilder = (() => {
           this.aSearchlight.beam.visible = !tripped;
           this.aSearchlight.point.intensity = tripped ? 0 : 16;
         },
-        { type: 'pole' }
+        { type: 'pole' },
+        'Zone A Searchlight Breaker Box'
       );
 
       // 差异化场景机关 B：仓库南门内侧照明配电闸刀（紧贴南墙内壁 z=-14.175）
@@ -1091,7 +1096,8 @@ const LevelBuilder = (() => {
           this.warehouseLights.doorSpill.visible = on;
           this.warehouseLights.bulbMat.color.setHex(on ? 0xffc670 : 0x262930);
         },
-        { type: 'wall', dirZ: 1 }
+        { type: 'wall', dirZ: 1 },
+        'Zone B Warehouse Main Breaker'
       );
     }
 
@@ -1125,10 +1131,10 @@ const LevelBuilder = (() => {
 
       // 4 处战术弹药补给箱（补充备弹与投掷物，支持冷却再生）
       const ammoPositions = [
-        { name: '南侧码头弹药箱', pos: new THREE.Vector3(-2.5, 0.0, 25.5) },
-        { name: '西区高台前弹药箱', pos: new THREE.Vector3(-19.5, 0.0, 13.5) },
-        { name: '仓库内西南角弹药箱', pos: new THREE.Vector3(-19.2, 0.019, -18.0) },
-        { name: '东侧龙门区弹药箱', pos: new THREE.Vector3(14.0, 0.0, -5.5) },
+        { name: '南侧码头弹药箱', nameEn: 'South Pier Ammo Crate', pos: new THREE.Vector3(-2.5, 0.0, 25.5) },
+        { name: '西区高台前弹药箱', nameEn: 'West Platform Ammo Crate', pos: new THREE.Vector3(-19.5, 0.0, 13.5) },
+        { name: '仓库内西南角弹药箱', nameEn: 'Warehouse SW Corner Ammo Crate', pos: new THREE.Vector3(-19.2, 0.019, -18.0) },
+        { name: '东侧龙门区弹药箱', nameEn: 'East Gantry Zone Ammo Crate', pos: new THREE.Vector3(14.0, 0.0, -5.5) },
       ];
       for (const spec of ammoPositions) {
         const g = new THREE.Group();
@@ -1154,6 +1160,7 @@ const LevelBuilder = (() => {
         this.scene.add(g);
         this.ammoCrates.push({
           name: spec.name,
+          nameEn: spec.nameEn,
           pos: spec.pos.clone().add(new THREE.Vector3(0, 0.5, 0)),
           group: g,
           stripMat,
@@ -1298,6 +1305,7 @@ const LevelBuilder = (() => {
       this.tutorialRelay = {
         id: 'SIM',
         name: '模拟通信中继器',
+        nameEn: 'Simulated Comms Relay',
         pos: simPos.clone().add(new THREE.Vector3(0, 1.3, 0)),
         group: simGroup,
         panel: simPanel,

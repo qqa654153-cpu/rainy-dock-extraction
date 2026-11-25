@@ -5,6 +5,11 @@
 const RenderEngine = (() => {
   'use strict';
 
+  const _warmupText = (key, fallback, params) => {
+    const i18n = typeof I18n !== 'undefined' ? I18n : (typeof window !== 'undefined' ? window.I18n : null);
+    return i18n && typeof i18n.t === 'function' ? i18n.t(key, params) : fallback;
+  };
+
   class PuddleReflector extends THREE.Mesh {
     constructor(width, depth, puddleTex, texWidth, texHeight, rainOccTex = null) {
       const geo = new THREE.PlaneGeometry(width, depth);
@@ -2146,7 +2151,7 @@ const RenderEngine = (() => {
       }
       if (this._extremePrepared) {
         if (onPrepareDetail) onPrepareDetail(true);
-        if (onProgress) onProgress(1.0, '极限画质已预热');
+        if (onProgress) onProgress(1.0, _warmupText('warmup.alreadyPrepared', '极限画质已预热'));
         return true;
       }
 
@@ -2165,7 +2170,7 @@ const RenderEngine = (() => {
           return false;
         }
 
-        report(0.48, '装配极高细节资产与材质');
+        report(0.48, _warmupText('warmup.assemblingAssets', '装配极高细节资产与材质'));
         this.texFactory.upgradeForExtreme(this.gpuBaker, maxAniso, baked);
         this._applyExtremeTexturesAndUniforms(baked);
 

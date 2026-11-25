@@ -1,27 +1,39 @@
 {
-  "version": 1,
+  "version": 2,
   "roles": {
     "instructor": {
       "speakerLabel": "教官",
+      "speakerLabelEn": "INSTRUCTOR",
       "edgeVoice": "zh-CN-YunjianNeural",
       "rate": "+6%",
       "pitch": "-4Hz",
+      "edgeVoiceEn": "en-US-GuyNeural",
+      "rateEn": "+4%",
+      "pitchEn": "-2Hz",
       "speechPitch": 0.9,
       "speechRate": 1.05
     },
     "watcher": {
       "speakerLabel": "守望者 // 频道 04",
+      "speakerLabelEn": "OVERWATCH // CH-04",
       "edgeVoice": "zh-CN-XiaoxiaoNeural",
       "rate": "+4%",
       "pitch": "+0Hz",
+      "edgeVoiceEn": "en-US-AriaNeural",
+      "rateEn": "+4%",
+      "pitchEn": "+0Hz",
       "speechPitch": 1.04,
       "speechRate": 1.05
     },
     "evac": {
       "speakerLabel": "撤离一号 // EVAC-01",
+      "speakerLabelEn": "EVAC-01",
       "edgeVoice": "zh-CN-YunxiNeural",
       "rate": "+10%",
       "pitch": "-2Hz",
+      "edgeVoiceEn": "en-US-ChristopherNeural",
+      "rateEn": "+8%",
+      "pitchEn": "-2Hz",
       "speechPitch": 0.95,
       "speechRate": 1.1
     }
@@ -33,7 +45,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "欢迎来到 04 号码头。先热身基础机动：WASD 移动、按住 Shift 冲刺、冲刺中按 C 滑铲、按 C 下蹲利用掩体，并按 F 切换战术枪灯。",
-      "ttsText": "欢迎来到零四号码头。先热身基础机动：W A S D 移动、按住 Shift 冲刺、冲刺中按 C 滑铲、按 C 下蹲利用掩体，并按 F 切换战术枪灯。"
+      "ttsText": "欢迎来到零四号码头。先热身基础机动：W A S D 移动、按住 Shift 冲刺、冲刺中按 C 滑铲、按 C 下蹲利用掩体，并按 F 切换战术枪灯。",
+      "displayTextEn": "Welcome to Pier 04. Warm up basic movement: WASD to move, hold Shift to sprint, press C while sprinting to slide, press C to crouch in cover, and press F to toggle your weapon light.",
+      "ttsTextEn": "Welcome to Pier Zero Four. Warm up basic movement: W A S D to move, hold Shift to sprint, press C while sprinting to slide, press C to crouch in cover, and press F to toggle your weapon light."
     },
     {
       "id": "tut_2",
@@ -41,7 +55,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "机动良好！按住鼠标右键使用当前瞄具开镜（ADS）并点射 3 发，然后按 [1]/[2] 切换副手枪，再按 [T] 体验现场装卸消音器。",
-      "ttsText": "机动良好！按住鼠标右键使用当前瞄具开镜观察视野并点射三发，然后按一二键切换主副武器，再按 T 键体验现场装卸消音器。"
+      "ttsText": "机动良好！按住鼠标右键使用当前瞄具开镜观察视野并点射三发，然后按一二键切换主副武器，再按 T 键体验现场装卸消音器。",
+      "displayTextEn": "Good movement! Hold Right Click to ADS with your optics and fire 3 bursts, press [1]/[2] to swap to your sidearm, then press [T] to attach or detach your suppressor in the field.",
+      "ttsTextEn": "Good movement! Hold Right Click to A D S with your optics and fire three bursts, press one or two to swap to your sidearm, then press T to attach or detach your suppressor in the field."
     },
     {
       "id": "tut_3",
@@ -49,7 +65,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "前方 13 米已投放训练靶机！瞄准正中红色光学核心打出 2 倍金色暴击将其击毁，随后按 [R] 将当前弹匣补满。",
-      "ttsText": "前方十三米已投放训练靶机！瞄准正中红色光学核心打出两倍金色暴击将其击毁，随后按 R 键将当前弹匣补满。"
+      "ttsText": "前方十三米已投放训练靶机！瞄准正中红色光学核心打出两倍金色暴击将其击毁，随后按 R 键将当前弹匣补满。",
+      "displayTextEn": "Training drone deployed 13 meters ahead! Aim for the red optical core at center mass for 2x gold crits to destroy it, then press [R] to top off your magazine.",
+      "ttsTextEn": "Training drone deployed thirteen meters ahead! Aim for the red optical core at center mass for two-times gold crits to destroy it, then press R to top off your magazine."
     },
     {
       "id": "tut_4",
@@ -57,7 +75,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "潜行暗杀演练：按 [Q] 触发战术脉冲扫描标记前方背对你的警戒单位，绕到它身后靠近按 [V] 执行无声处决（免疫普通子弹）！",
-      "ttsText": "潜行暗杀演练：按 Q 键触发战术脉冲扫描标记前方背对你的警戒单位，绕到它身后靠近按 V 键执行无声近战处决。"
+      "ttsText": "潜行暗杀演练：按 Q 键触发战术脉冲扫描标记前方背对你的警戒单位，绕到它身后靠近按 V 键执行无声近战处决。",
+      "displayTextEn": "Stealth takedown drill: press [Q] for a tactical pulse scan to tag the sentry ahead facing away from you, flank behind it, and press [V] up close for a silent execution—it's immune to standard rounds!",
+      "ttsTextEn": "Stealth takedown drill: press Q for a tactical pulse scan to tag the sentry ahead facing away from you, flank behind it, and press V up close for a silent execution. It is immune to standard rounds!"
     },
     {
       "id": "tut_5",
@@ -65,7 +85,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "防爆盾靶出现！按 [4] 切换投掷道具确认选定 EMP 雷，按 [G] 投出瘫痪护盾后开火击杀！（身旁蓝光补给箱可随时按 [E] 无限补雷）",
-      "ttsText": "防爆盾靶出现！按四键切换投掷道具选定 E M P 电磁雷，按 G 键投出瘫痪护盾后开火击杀！身旁蓝光补给箱可随时按 E 键补雷。"
+      "ttsText": "防爆盾靶出现！按四键切换投掷道具选定 E M P 电磁雷，按 G 键投出瘫痪护盾后开火击杀！身旁蓝光补给箱可随时按 E 键补雷。",
+      "displayTextEn": "Riot-shield target inbound! Press [4] to cycle throwables and select the EMP grenade, press [G] to throw and disable its shield, then open fire! (Press [E] at the blue supply crate beside you anytime for unlimited refills.)",
+      "ttsTextEn": "Riot-shield target inbound! Press four to cycle throwables and select the E M P grenade, press G to throw and disable its shield, then open fire! Press E at the blue supply crate beside you anytime for unlimited refills."
     },
     {
       "id": "tut_6",
@@ -73,7 +95,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "善用集装箱制高点与自动探头！沿西侧青色光柱金属斜坡登上集装箱高台（贴箱边按右键开镜即可自动侧身探头）。",
-      "ttsText": "善用集装箱制高点与自动探头！沿西侧青色光柱金属斜坡登上集装箱高台，贴近箱边按右键开镜即可自动侧身探头。"
+      "ttsText": "善用集装箱制高点与自动探头！沿西侧青色光柱金属斜坡登上集装箱高台，贴近箱边按右键开镜即可自动侧身探头。",
+      "displayTextEn": "Use container high ground and auto-lean! Climb the metal ramp marked by the cyan beacon on the west side to reach the container deck—aim down sights near a corner to lean out automatically.",
+      "ttsTextEn": "Use container high ground and auto-lean! Climb the metal ramp marked by the cyan beacon on the west side to reach the container deck. Aim down sights near a corner to lean out automatically."
     },
     {
       "id": "tut_7_out",
@@ -81,7 +105,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "高台视野极佳！现在向西北铁皮仓库（青色光柱入口）移动，进屋体会暴雨隔绝声学并使用演练医疗箱。",
-      "ttsText": "高台视野极佳！现在向西北铁皮仓库移动，进屋体会暴雨隔绝声学变化，并使用室内演练医疗箱。"
+      "ttsText": "高台视野极佳！现在向西北铁皮仓库移动，进屋体会暴雨隔绝声学变化，并使用室内演练医疗箱。",
+      "displayTextEn": "Great sightlines from up top! Now move to the northwest sheet-metal warehouse (cyan beacon entrance), step inside to hear the rain acoustics muffle, and use the drill medkit.",
+      "ttsTextEn": "Great sightlines from up top! Now move to the northwest sheet-metal warehouse at the cyan beacon entrance, step inside to hear the rain acoustics muffle, and use the drill medkit."
     },
     {
       "id": "tut_7_in",
@@ -89,7 +115,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "已进入铁皮仓库！听：雨声瞬变低通闷响且地面干燥。靠近绿色演练医疗箱按 [E] 回满生命值！",
-      "ttsText": "已进入铁皮仓库！听，雨声瞬变低通闷响且地面干燥。靠近绿色演练医疗箱按 E 键回满生命值！"
+      "ttsText": "已进入铁皮仓库！听，雨声瞬变低通闷响且地面干燥。靠近绿色演练医疗箱按 E 键回满生命值！",
+      "displayTextEn": "Inside the sheet-metal warehouse! Listen: the storm drops to a low-pass hum and the deck is dry. Approach the green drill medkit and press [E] to restore full health!",
+      "ttsTextEn": "Inside the sheet-metal warehouse! Listen: the storm drops to a low-pass hum and the deck is dry. Approach the green drill medkit and press E to restore full health!"
     },
     {
       "id": "tut_8",
@@ -97,7 +125,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "最终演练：走出南门找到模拟中继器。你可以长按 [E] 无声黑入（不惊动敌人），或按 [G] 贴 C4 强爆摧毁，任选其一即可结业！",
-      "ttsText": "最终演练：走出南门找到模拟中继器。你可以长按 E 键无声黑入，或按 G 键贴装 C4 强爆摧毁，任选其一即可结业！"
+      "ttsText": "最终演练：走出南门找到模拟中继器。你可以长按 E 键无声黑入，或按 G 键贴装 C4 强爆摧毁，任选其一即可结业！",
+      "displayTextEn": "Final drill: exit the south door and locate the simulated relay. Either hold [E] for a silent hack without alerting hostiles, or press [G] to plant C4 and blow it loud—complete either to graduate!",
+      "ttsTextEn": "Final drill: exit the south door and locate the simulated relay. Either hold E for a silent hack without alerting hostiles, or press G to plant C four and blow it loud. Complete either to graduate!"
     },
     {
       "id": "tut_complete",
@@ -105,7 +135,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "全部 8 项战术演练达标！2 秒后将在南侧泊位满状态重置，正式开启「0/3 中继器切断」实战撤离任务！",
-      "ttsText": "全部八项战术演练达标！两秒后将在南侧泊位满状态重置，正式开启三处中继器切断实战撤离任务！"
+      "ttsText": "全部八项战术演练达标！两秒后将在南侧泊位满状态重置，正式开启三处中继器切断实战撤离任务！",
+      "displayTextEn": "All 8 tactical drills passed! Resetting at full readiness at the south berth in 2 seconds—live 0/3 relay-sabotage extraction begins now!",
+      "ttsTextEn": "All eight tactical drills passed! Resetting at full readiness at the south berth in two seconds. Live zero-of-three relay-sabotage extraction begins now!"
     },
     {
       "id": "mission_start",
@@ -113,7 +145,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "风暴已掩护你渗入 04 号码头。按任意顺序靠近 3 处通信中继器并长按 E 切断信号！",
-      "ttsText": "风暴已掩护你渗入零四号码头。按任意顺序靠近三处通信中继器，并长按 E 键切断信号！"
+      "ttsText": "风暴已掩护你渗入零四号码头。按任意顺序靠近三处通信中继器，并长按 E 键切断信号！",
+      "displayTextEn": "The storm masks your insertion into Pier 04. Reach all 3 comms relays in any order and hold [E] to cut the signal!",
+      "ttsTextEn": "The storm masks your insertion into Pier Zero Four. Reach all three comms relays in any order and hold E to cut the signal!"
     },
     {
       "id": "mission_skip",
@@ -121,7 +155,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "已跳过新手引导，直接切入 04 号码头实战！按任意顺序切断 3 处通信中继器！",
-      "ttsText": "已跳过新手引导，直接切入零四号码头实战！按任意顺序切断三处通信中继器！"
+      "ttsText": "已跳过新手引导，直接切入零四号码头实战！按任意顺序切断三处通信中继器！",
+      "displayTextEn": "Briefing skipped—dropping straight into live ops at Pier 04! Take down all 3 comms relays in any order!",
+      "ttsTextEn": "Briefing skipped, dropping straight into live ops at Pier Zero Four! Take down all three comms relays in any order!"
     },
     {
       "id": "mission_restart",
@@ -129,7 +165,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "已重新部署至南侧防波堤。切断全部 3 处中继器后向东北码头撤离！",
-      "ttsText": "已重新部署至南侧防波堤。切断全部三处中继器后向东北码头撤离！"
+      "ttsText": "已重新部署至南侧防波堤。切断全部三处中继器后向东北码头撤离！",
+      "displayTextEn": "Redeployed to the south breakwater. Cut all 3 relays, then extract at the northeast pier!",
+      "ttsTextEn": "Redeployed to the south breakwater. Cut all three relays, then extract at the northeast pier!"
     },
     {
       "id": "relay_A_1",
@@ -137,7 +175,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继器 A（西侧集装箱区）已切断 (1/3)！敌方警戒警报已触发，注意拦截无人机与机械犬！",
-      "ttsText": "中继器 A，西侧集装箱区已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！"
+      "ttsText": "中继器 A，西侧集装箱区已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！",
+      "displayTextEn": "Relay A (West Container Yard) offline (1/3)! Hostile alert triggered—watch for interceptor drones and mech hounds!",
+      "ttsTextEn": "Relay A, West Container Yard, offline, one of three! Hostile alert triggered. Watch for interceptor drones and mech hounds!"
     },
     {
       "id": "relay_A_2",
@@ -145,7 +185,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继器 A（西侧集装箱区）已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！",
-      "ttsText": "中继器 A，西侧集装箱区已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！"
+      "ttsText": "中继器 A，西侧集装箱区已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！",
+      "displayTextEn": "Relay A (West Container Yard) offline (2/3)! One relay left—hostile interceptors closing in!",
+      "ttsTextEn": "Relay A, West Container Yard, offline, two of three! One relay left. Hostile interceptors closing in!"
     },
     {
       "id": "relay_B_1",
@@ -153,7 +195,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继器 B（铁皮仓库内部）已切断 (1/3)！敌方警戒警报已触发，注意拦截无人机与机械犬！",
-      "ttsText": "中继器 B，铁皮仓库内部已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！"
+      "ttsText": "中继器 B，铁皮仓库内部已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！",
+      "displayTextEn": "Relay B (Warehouse Interior) offline (1/3)! Hostile alert triggered—watch for interceptor drones and mech hounds!",
+      "ttsTextEn": "Relay B, Warehouse Interior, offline, one of three! Hostile alert triggered. Watch for interceptor drones and mech hounds!"
     },
     {
       "id": "relay_B_2",
@@ -161,7 +205,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继器 B（铁皮仓库内部）已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！",
-      "ttsText": "中继器 B，铁皮仓库内部已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！"
+      "ttsText": "中继器 B，铁皮仓库内部已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！",
+      "displayTextEn": "Relay B (Warehouse Interior) offline (2/3)! One relay left—hostile interceptors closing in!",
+      "ttsTextEn": "Relay B, Warehouse Interior, offline, two of three! One relay left. Hostile interceptors closing in!"
     },
     {
       "id": "relay_C_1",
@@ -169,7 +215,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继器 C（龙门吊控制台）已切断 (1/3)！敌方警戒警报已触发，注意拦截无人机与机械犬！",
-      "ttsText": "中继器 C，龙门吊控制台已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！"
+      "ttsText": "中继器 C，龙门吊控制台已切断，进度三分之一！敌方警戒警报已触发，注意拦截无人机与机械犬！",
+      "displayTextEn": "Relay C (Gantry Console) offline (1/3)! Hostile alert triggered—watch for interceptor drones and mech hounds!",
+      "ttsTextEn": "Relay C, Gantry Console, offline, one of three! Hostile alert triggered. Watch for interceptor drones and mech hounds!"
     },
     {
       "id": "relay_C_2",
@@ -177,7 +225,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继器 C（龙门吊控制台）已切断 (2/3)！只剩最后一处，敌方拦截部队正在逼近！",
-      "ttsText": "中继器 C，龙门吊控制台已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！"
+      "ttsText": "中继器 C，龙门吊控制台已切断，进度三分之二！只剩最后一处，敌方拦截部队正在逼近！",
+      "displayTextEn": "Relay C (Gantry Console) offline (2/3)! One relay left—hostile interceptors closing in!",
+      "ttsTextEn": "Relay C, Gantry Console, offline, two of three! One relay left. Hostile interceptors closing in!"
     },
     {
       "id": "evac_unlocked",
@@ -185,7 +235,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "全部中继器已离线！码头进入全面封锁，大批机器增援已出动——全速突破并前往东北泊位绿色信号处登船！",
-      "ttsText": "全部中继器已离线！码头进入全面封锁，大批机器增援已出动，全速突破并前往东北泊位绿色信号处登船！"
+      "ttsText": "全部中继器已离线！码头进入全面封锁，大批机器增援已出动，全速突破并前往东北泊位绿色信号处登船！",
+      "displayTextEn": "All relays offline! The dock is in full lockdown with heavy mech reinforcements inbound—break through and board at the green beacon on the northeast berth!",
+      "ttsTextEn": "All relays offline! The dock is in full lockdown with heavy mech reinforcements inbound. Break through and board at the green beacon on the northeast berth!"
     },
     {
       "id": "tac_low_hp",
@@ -193,7 +245,9 @@
       "priority": 2,
       "cooldownSec": 16,
       "displayText": "警告：护甲生命值严重受损！立即寻找掩体或使用医疗箱！",
-      "ttsText": "警告，护甲生命值严重受损！立即寻找掩体或使用医疗箱！"
+      "ttsText": "警告，护甲生命值严重受损！立即寻找掩体或使用医疗箱！",
+      "displayTextEn": "Warning: armor and vitals critical! Get to cover or pop a medkit now!",
+      "ttsTextEn": "Warning: armor and vitals critical! Get to cover or pop a medkit now!"
     },
     {
       "id": "tac_ammo_empty",
@@ -201,7 +255,9 @@
       "priority": 1,
       "cooldownSec": 8,
       "displayText": "弹匣打空，正在紧急换弹！",
-      "ttsText": "弹匣打空，正在紧急换弹！"
+      "ttsText": "弹匣打空，正在紧急换弹！",
+      "displayTextEn": "Mag dry—emergency reload!",
+      "ttsTextEn": "Mag dry! Emergency reload!"
     },
     {
       "id": "tac_medkit",
@@ -209,7 +265,9 @@
       "priority": 1,
       "cooldownSec": 10,
       "displayText": "应急医疗箱已注入，生命体征回升。",
-      "ttsText": "应急医疗箱已注入，生命体征回升。"
+      "ttsText": "应急医疗箱已注入，生命体征回升。",
+      "displayTextEn": "Emergency medkit applied. Vitals stabilizing.",
+      "ttsTextEn": "Emergency medkit applied. Vitals stabilizing."
     },
     {
       "id": "tac_barrel_kill",
@@ -217,7 +275,9 @@
       "priority": 1,
       "cooldownSec": 10,
       "displayText": "危化油桶已引爆，周边机械单位遭重创！",
-      "ttsText": "危化油桶已引爆，周边机械单位遭重创！"
+      "ttsText": "危化油桶已引爆，周边机械单位遭重创！",
+      "displayTextEn": "Hazmat barrel detonated—nearby hostiles heavily damaged!",
+      "ttsTextEn": "Hazmat barrel detonated. Nearby hostiles heavily damaged!"
     },
     {
       "id": "tac_evac_approach",
@@ -225,7 +285,9 @@
       "priority": 2,
       "cooldownSec": 60,
       "displayText": "已锁定你的位置！撤离快艇就在东北栈桥泊位，冲刺登船！",
-      "ttsText": "已锁定你的位置！撤离快艇就在东北栈桥泊位，冲刺登船！"
+      "ttsText": "已锁定你的位置！撤离快艇就在东北栈桥泊位，冲刺登船！",
+      "displayTextEn": "Got a lock on your transponder! Exfil boat is waiting at the northeast jetty berth—sprint to board!",
+      "ttsTextEn": "Got a lock on your transponder! Exfil boat is waiting at the northeast jetty berth. Sprint to board!"
     },
     {
       "id": "tac_evac_boarding",
@@ -233,7 +295,9 @@
       "priority": 2,
       "cooldownSec": 30,
       "displayText": "撤离锚链解锁中，掩护好自己，马上起航！",
-      "ttsText": "撤离锚链解锁中，掩护好自己，马上起航！"
+      "ttsText": "撤离锚链解锁中，掩护好自己，马上起航！",
+      "displayTextEn": "Releasing mooring lines—watch your six, we're pulling out!",
+      "ttsTextEn": "Releasing mooring lines. Watch your six, we're pulling out!"
     },
     {
       "id": "mission_victory",
@@ -241,7 +305,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "全员登船确认！撤离快艇正在驶离 04 号码头，行动圆满成功！",
-      "ttsText": "全员登船确认！撤离快艇正在驶离零四号码头，行动圆满成功！"
+      "ttsText": "全员登船确认！撤离快艇正在驶离零四号码头，行动圆满成功！",
+      "displayTextEn": "All hands aboard! Exfil boat clearing Pier 04—mission accomplished!",
+      "ttsTextEn": "All hands aboard! Exfil boat clearing Pier Zero Four. Mission accomplished!"
     },
     {
       "id": "mission_defeat",
@@ -249,7 +315,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "失去特遣队员生命信号，04 号码头撤离行动中止。",
-      "ttsText": "失去特遣队员生命信号，零四号码头撤离行动中止。"
+      "ttsText": "失去特遣队员生命信号，零四号码头撤离行动中止。",
+      "displayTextEn": "Operator flatlined—Pier 04 extraction aborted.",
+      "ttsTextEn": "Operator flatlined. Pier Zero Four extraction aborted."
     },
     {
       "id": "train_timed_start",
@@ -257,7 +325,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "限时打靶冲刺开始！瞄准靶机红色核心触发暴击，连续击毁叠加连击倍率！",
-      "ttsText": "限时打靶冲刺开始！瞄准靶机红色核心触发暴击，连续击毁叠加连击倍率！"
+      "ttsText": "限时打靶冲刺开始！瞄准靶机红色核心触发暴击，连续击毁叠加连击倍率！",
+      "displayTextEn": "Timed target sprint begins! Hit the red optical core for crits and chain kills to stack your combo multiplier!",
+      "ttsTextEn": "Timed target sprint begins! Hit the red optical core for crits and chain kills to stack your combo multiplier!"
     },
     {
       "id": "train_timed_end",
@@ -265,7 +335,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "时间到！本次打靶计时结束，请查看射击评分与暴击统计。",
-      "ttsText": "时间到！本次打靶计时结束，请查看射击评分与暴击统计。"
+      "ttsText": "时间到！本次打靶计时结束，请查看射击评分与暴击统计。",
+      "displayTextEn": "Time's up! Range clock stopped—review your accuracy rating and crit telemetry.",
+      "ttsTextEn": "Time's up! Range clock stopped. Review your accuracy rating and crit telemetry."
     },
     {
       "id": "train_endless_start",
@@ -273,7 +345,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "无尽波次防线已启动！敌方机械集群正在逼近，清完每波可获得短暂整备回血！",
-      "ttsText": "无尽波次防线已启动！敌方机械集群正在逼近，清完每波可获得短暂整备回血！"
+      "ttsText": "无尽波次防线已启动！敌方机械集群正在逼近，清完每波可获得短暂整备回血！",
+      "displayTextEn": "Endless defense active! Hostile mech waves inbound—clear each wave for a brief resupply and regen window!",
+      "ttsTextEn": "Endless defense active! Hostile mech waves inbound. Clear each wave for a brief resupply and regen window!"
     },
     {
       "id": "train_endless_wave",
@@ -281,7 +355,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "警戒！新一波机械增援已进入码头防区，利用掩体与危化油桶迎敌！",
-      "ttsText": "警戒！新一波机械增援已进入码头防区，利用掩体与危化油桶迎敌！"
+      "ttsText": "警戒！新一波机械增援已进入码头防区，利用掩体与危化油桶迎敌！",
+      "displayTextEn": "Alert! New wave of mech reinforcements entering the dock perimeter—use cover and hazmat barrels!",
+      "ttsTextEn": "Alert! New wave of mech reinforcements entering the dock perimeter. Use cover and hazmat barrels!"
     },
     {
       "id": "train_stage_1",
@@ -289,7 +365,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡一：西区集装箱攻防。利用斜坡抢占高台，消灭敌军并切断 A 号中继器！",
-      "ttsText": "关卡一，西区集装箱攻防。利用斜坡抢占高台，消灭敌军并切断 A 号中继器！"
+      "ttsText": "关卡一，西区集装箱攻防。利用斜坡抢占高台，消灭敌军并切断 A 号中继器！",
+      "displayTextEn": "Stage 1: West Container Yard assault. Take the ramp for high ground, clear hostiles, and cut Relay A!",
+      "ttsTextEn": "Stage one: West Container Yard assault. Take the ramp for high ground, clear hostiles, and cut Relay A!"
     },
     {
       "id": "train_stage_2",
@@ -297,7 +375,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡二：铁皮仓库室内近战。小心机械犬近距突袭，肃清仓库并切断 B 号中继器！",
-      "ttsText": "关卡二，铁皮仓库室内近战。小心机械犬近距突袭，肃清仓库并切断 B 号中继器！"
+      "ttsText": "关卡二，铁皮仓库室内近战。小心机械犬近距突袭，肃清仓库并切断 B 号中继器！",
+      "displayTextEn": "Stage 2: Warehouse CQB. Watch for close-quarters mech hound rushes, clear the bay, and cut Relay B!",
+      "ttsTextEn": "Stage two: Warehouse C Q B. Watch for close-quarters mech hound rushes, clear the bay, and cut Relay B!"
     },
     {
       "id": "train_stage_3",
@@ -305,7 +385,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡三：东侧龙门吊制高点。善用危险油桶连锁爆破，肃清敌军并切断 C 号中继器！",
-      "ttsText": "关卡三，东侧龙门吊制高点。善用危险油桶连锁爆破，肃清敌军并切断 C 号中继器！"
+      "ttsText": "关卡三，东侧龙门吊制高点。善用危险油桶连锁爆破，肃清敌军并切断 C 号中继器！",
+      "displayTextEn": "Stage 3: East Gantry high ground. Chain hazmat barrel blasts to clear the yard and cut Relay C!",
+      "ttsTextEn": "Stage three: East Gantry high ground. Chain hazmat barrel blasts to clear the yard and cut Relay C!"
     },
     {
       "id": "train_stage_4",
@@ -313,7 +395,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡四：终局全面封锁突围！全速冲破机器防线，前往东北泊位长按 E 登船撤离！",
-      "ttsText": "关卡四，终局全面封锁突围！全速冲破机器防线，前往东北泊位长按 E 键登船撤离！"
+      "ttsText": "关卡四，终局全面封锁突围！全速冲破机器防线，前往东北泊位长按 E 键登船撤离！",
+      "displayTextEn": "Stage 4: Final lockdown breakout! Punch through the mech perimeter and hold [E] at the northeast berth to exfil!",
+      "ttsTextEn": "Stage four: Final lockdown breakout! Punch through the mech perimeter and hold E at the northeast berth to exfil!"
     },
     {
       "id": "train_stage_clear",
@@ -321,7 +405,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡练习达标！区域目标已全部肃清，表现干脆利落！",
-      "ttsText": "关卡练习达标！区域目标已全部肃清，表现干脆利落！"
+      "ttsText": "关卡练习达标！区域目标已全部肃清，表现干脆利落！",
+      "displayTextEn": "Stage drill complete! Sector objectives neutralized—clean execution!",
+      "ttsTextEn": "Stage drill complete! Sector objectives neutralized. Clean execution!"
     },
     {
       "id": "relay_stealth_clean",
@@ -329,7 +415,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "中继节点已无声黑入！敌方巡防网尚未察觉，继续保持幽灵渗入节奏。",
-      "ttsText": "中继节点已无声黑入！敌方巡防网尚未察觉，继续保持幽灵渗入节奏。"
+      "ttsText": "中继节点已无声黑入！敌方巡防网尚未察觉，继续保持幽灵渗入节奏。",
+      "displayTextEn": "Relay node silently hacked! Patrol grid remains unaware—maintain ghost insertion.",
+      "ttsTextEn": "Relay node silently hacked! Patrol grid remains unaware. Maintain ghost insertion."
     },
     {
       "id": "relay_c4_loud",
@@ -337,7 +425,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "高爆破拆已瞬间摧毁中继核心！巨响已惊动码头防区，准备迎击追猎小队！",
-      "ttsText": "高爆破拆已瞬间摧毁中继核心！巨响已惊动码头防区，准备迎击追猎小队！"
+      "ttsText": "高爆破拆已瞬间摧毁中继核心！巨响已惊动码头防区，准备迎击追猎小队！",
+      "displayTextEn": "C4 charge blew the relay core! Blast alerted the dock perimeter—brace for hunter squads!",
+      "ttsTextEn": "C four charge blew the relay core! Blast alerted the dock perimeter. Brace for hunter squads!"
     },
     {
       "id": "alarm_compromised",
@@ -345,7 +435,9 @@
       "priority": 2,
       "cooldownSec": 18,
       "displayText": "警告：敌方侦察单位已发出警报信号，周边增援小队正在合围！",
-      "ttsText": "警告，敌方侦察单位已发出警报信号，周边增援小队正在合围！"
+      "ttsText": "警告，敌方侦察单位已发出警报信号，周边增援小队正在合围！",
+      "displayTextEn": "Warning: hostile recon unit transmitted an alarm—nearby reinforcements converging!",
+      "ttsTextEn": "Warning: hostile recon unit transmitted an alarm. Nearby reinforcements converging!"
     },
     {
       "id": "enemy_shield_warn",
@@ -353,7 +445,9 @@
       "priority": 2,
       "cooldownSec": 24,
       "displayText": "发现防爆盾重装机兵！正面装甲弹反常规子弹，建议侧翼绕后、投掷 EMP 破盾或炸桶！",
-      "ttsText": "发现防爆盾重装机兵！正面装甲弹反常规子弹，建议侧翼绕后、投掷 E M P 破盾或炸桶！"
+      "ttsText": "发现防爆盾重装机兵！正面装甲弹反常规子弹，建议侧翼绕后、投掷 E M P 破盾或炸桶！",
+      "displayTextEn": "Heavy riot-shield mech spotted! Frontal armor deflects standard rounds—flank behind, throw EMP, or detonate a barrel!",
+      "ttsTextEn": "Heavy riot-shield mech spotted! Frontal armor deflects standard rounds. Flank behind, throw E M P, or detonate a barrel!"
     },
     {
       "id": "enemy_laser_warn",
@@ -361,7 +455,9 @@
       "priority": 2,
       "cooldownSec": 20,
       "displayText": "小心高处红线激光锁定！高台狙击无人机正在蓄能，立即滑铲进掩体或反狙击！",
-      "ttsText": "小心高处红线激光锁定！高台狙击无人机正在蓄能，立即滑铲进掩体或反狙击！"
+      "ttsText": "小心高处红线激光锁定！高台狙击无人机正在蓄能，立即滑铲进掩体或反狙击！",
+      "displayTextEn": "Watch the high-angle laser lock! Elevated sniper drone charging—slide into cover or counter-snipe now!",
+      "ttsTextEn": "Watch the high-angle laser lock! Elevated sniper drone charging. Slide into cover or counter-snipe now!"
     },
     {
       "id": "evac_holdout_start",
@@ -369,7 +465,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "全部中继器已离线！我艇正在全速抵近东北栈桥，守住泊位 30 秒直到接应泊靠！",
-      "ttsText": "全部中继器已离线！我艇正在全速抵近东北栈桥，守住泊位三十秒直到接应泊靠！"
+      "ttsText": "全部中继器已离线！我艇正在全速抵近东北栈桥，守住泊位三十秒直到接应泊靠！",
+      "displayTextEn": "All relays offline! Inbound hot to the northeast jetty—hold the berth for 30 seconds until we dock!",
+      "ttsTextEn": "All relays offline! Inbound hot to the northeast jetty. Hold the berth for thirty seconds until we dock!"
     },
     {
       "id": "evac_holdout_15s",
@@ -377,7 +475,9 @@
       "priority": 2,
       "cooldownSec": 30,
       "displayText": "还剩 15 秒抵达接应泊位！压制东北方向来敌，守住栈桥入口！",
-      "ttsText": "还剩十五秒抵达接应泊位！压制东北方向来敌，守住栈桥入口！"
+      "ttsText": "还剩十五秒抵达接应泊位！压制东北方向来敌，守住栈桥入口！",
+      "displayTextEn": "15 seconds to dock! Suppress hostiles from the northeast and hold the jetty approach!",
+      "ttsTextEn": "Fifteen seconds to dock! Suppress hostiles from the northeast and hold the jetty approach!"
     },
     {
       "id": "ammo_crate_resupply",
@@ -385,7 +485,9 @@
       "priority": 1,
       "cooldownSec": 10,
       "displayText": "码头战术弹药箱已开启，主副武器备弹与战术投掷物已补充。",
-      "ttsText": "码头战术弹药箱已开启，主副武器备弹与战术投掷物已补充。"
+      "ttsText": "码头战术弹药箱已开启，主副武器备弹与战术投掷物已补充。",
+      "displayTextEn": "Tactical ammo crate opened—primary, sidearm reserve, and throwables replenished.",
+      "ttsTextEn": "Tactical ammo crate opened. Primary, sidearm reserve, and throwables replenished."
     },
     {
       "id": "ammo_low_reserve",
@@ -393,7 +495,9 @@
       "priority": 2,
       "cooldownSec": 16,
       "displayText": "警告：备弹存量告急！请切换副手枪或寻找码头周边绿色战术弹药箱。",
-      "ttsText": "警告，备弹存量告急！请切换副手枪或寻找码头周边绿色战术弹药箱。"
+      "ttsText": "警告，备弹存量告急！请切换副手枪或寻找码头周边绿色战术弹药箱。",
+      "displayTextEn": "Warning: reserve ammo critical! Swap to your USP-9 sidearm or hit a green tactical ammo crate on the pier.",
+      "ttsTextEn": "Warning: reserve ammo critical! Swap to your U S P Nine sidearm or hit a green tactical ammo crate on the pier."
     },
     {
       "id": "endless_airdrop_ready",
@@ -401,7 +505,9 @@
       "priority": 3,
       "cooldownSec": 8,
       "displayText": "波次间隙整备开启！空投战术模块已投放，选择一项强化继续迎敌！",
-      "ttsText": "波次间隙整备开启！空投战术模块已投放，选择一项强化继续迎敌！"
+      "ttsText": "波次间隙整备开启！空投战术模块已投放，选择一项强化继续迎敌！",
+      "displayTextEn": "Inter-wave resupply online! Tactical airdrop module ready—select an upgrade and hold the line!",
+      "ttsTextEn": "Inter-wave resupply online! Tactical airdrop module ready. Select an upgrade and hold the line!"
     },
     {
       "id": "mission_rank_s",
@@ -409,7 +515,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "全员安全登船！指挥部授予本次行动最高 S 级特战评价，干得太漂亮了！",
-      "ttsText": "全员安全登船！指挥部授予本次行动最高 S 级特战评价，干得太漂亮了！"
+      "ttsText": "全员安全登船！指挥部授予本次行动最高 S 级特战评价，干得太漂亮了！",
+      "displayTextEn": "All hands safely aboard! Command awards top S-rank spec-ops rating—outstanding work!",
+      "ttsTextEn": "All hands safely aboard! Command awards top S rank spec-ops rating. Outstanding work!"
     },
     {
       "id": "train_stage_5",
@@ -417,7 +525,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡五：潜行暗杀与发报打断演练。利用 T 键消音器、V 键背后处决与诱饵器无声切断中继器！",
-      "ttsText": "关卡五，潜行暗杀与发报打断演练。利用 T 键消音器、V 键背后处决与诱饵器无声切断中继器！"
+      "ttsText": "关卡五，潜行暗杀与发报打断演练。利用 T 键消音器、V 键背后处决与诱饵器无声切断中继器！",
+      "displayTextEn": "Stage 5: Stealth takedown and comms-jam drill. Use your [T] suppressor, [V] backstab execution, and decoys to sever the relay silently!",
+      "ttsTextEn": "Stage five: Stealth takedown and comms-jam drill. Use your suppressor on T, backstab execution on V, and decoys to sever the relay silently!"
     },
     {
       "id": "train_stage_6",
@@ -425,7 +535,9 @@
       "priority": 3,
       "cooldownSec": 0,
       "displayText": "关卡六：重装破盾与反狙击演练。用 G 键 EMP 瘫痪防爆盾兵，利用滑铲躲避激光狙击并肃清战区！",
-      "ttsText": "关卡六，重装破盾与反狙击演练。用 G 键 E M P 瘫痪防爆盾兵，利用滑铲躲避激光狙击并肃清战区！"
+      "ttsText": "关卡六，重装破盾与反狙击演练。用 G 键 E M P 瘫痪防爆盾兵，利用滑铲躲避激光狙击并肃清战区！",
+      "displayTextEn": "Stage 6: Heavy shield-break and counter-snipe drill. Stun riot-shield mechs with [G] EMP, slide past laser locks, and clear the zone!",
+      "ttsTextEn": "Stage six: Heavy shield-break and counter-snipe drill. Stun riot-shield mechs with E M P on G, slide past laser locks, and clear the zone!"
     }
   ]
 }

@@ -566,7 +566,7 @@ test('extreme quality preset, DRS scaling curve, UI controls, and non-collision 
   assert.ok(GameLogic.computeDrsScale(0.68, 30, true, 1.0) >= 0.65);
 
   const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
-  assert.ok(html.includes('<option value="extreme">'), 'Missing extreme quality option in index.html');
+  assert.ok(/<option\b[^>]*\bvalue="extreme"/i.test(html), 'Missing extreme quality option in index.html');
   assert.ok(html.includes('id="opt-drs"'), 'Missing DRS toggle switch #opt-drs in index.html');
   assert.ok(html.includes('src/extreme_gfx.js'), 'Missing src/extreme_gfx.js script include');
 
@@ -829,6 +829,7 @@ test('computeExplosionFalloff occluded attenuation & spatial/stealth/settings he
     volume: 0,
     voiceVolume: 1,
     voiceMode: 'radio',
+    voiceLang: 'auto',
     toggleAds: true,
     invertY: true,
   });
@@ -837,6 +838,7 @@ test('computeExplosionFalloff occluded attenuation & spatial/stealth/settings he
 test('quality polish & QoL static contracts in index.html, src/app.js, and src/enemy.js', () => {
   const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
   const appSrc = fs.readFileSync(path.join(rootDir, 'src', 'app.js'), 'utf8');
+  const i18nSrc = fs.readFileSync(path.join(rootDir, 'src', 'i18n.js'), 'utf8');
   const enemySrc = fs.readFileSync(path.join(rootDir, 'src', 'enemy.js'), 'utf8');
 
   // HTML QoL & copy fixes
@@ -853,8 +855,8 @@ test('quality polish & QoL static contracts in index.html, src/app.js, and src/e
   assert.ok(appSrc.includes("dataset.action = 'restart-combat'"));
   assert.ok(appSrc.includes('this.audio.updateListener') && appSrc.includes('this.weapon.updateThrowPreview'));
   assert.ok(appSrc.includes('playTinnitusFlash'));
-  assert.ok(!appSrc.includes('注意蓝色激光线'), 'Sniper laser warning must reference red laser, not blue');
-  assert.ok(appSrc.includes('小心高处红线激光锁定'));
+  assert.ok(!appSrc.includes('注意蓝色激光线') && !i18nSrc.includes('注意蓝色激光线'), 'Sniper laser warning must reference red laser, not blue');
+  assert.ok(appSrc.includes('app.radio.sniperWarn') && i18nSrc.includes('小心高处红线激光锁定'));
 
   // Ensure weapon.onBreakerHit does NOT re-call this.level.triggerBreaker
   const breakerHookMatch = appSrc.match(/this\.weapon\.onBreakerHit\s*=\s*\(breaker\)\s*=>\s*\{[\s\S]*?\n\s*\};/);
@@ -1086,6 +1088,251 @@ test('level geometry zero-overlap invariants for floor, pier, curbs, wallSpecs, 
       assert.ok(vol < 1e-9, `Wall pair (${i}, ${j}) overlaps with volume ${vol}`);
     }
   }
+});
+
+test('voice_manifest.json v2 contains complete ZH & EN role and clip metadata across all 50 clips', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(rootDir, 'voices', 'voice_manifest.json'), 'utf8'));
+  assert.equal(manifest.version, 2);
+  assert.ok(Array.isArray(manifest.clips) && manifest.clips.length === 50, 'Expected 50 manifest clips');
+
+  const expectedRoles = {
+    instructor: 'INSTRUCTOR',
+    watcher: 'OVERWATCH // CH-04',
+    evac: 'EVAC-01',
+  };
+  for (const [roleId, enLabel] of Object.entries(expectedRoles)) {
+    const r = manifest.roles && manifest.roles[roleId];
+    assert.ok(r, `Missing role '${roleId}' in manifest`);
+    for (const field of ['speakerLabel', 'speakerLabelEn', 'edgeVoice', 'rate', 'pitch', 'edgeVoiceEn', 'rateEn', 'pitchEn']) {
+      assert.ok(typeof r[field] === 'string' && r[field].trim().length > 0, `Missing role.${roleId}.${field}`);
+    }
+    assert.equal(r.speakerLabelEn, enLabel);
+    assert.ok(typeof r.speechPitch === 'number' && typeof r.speechRate === 'number');
+  }
+
+  const seenIds = new Set();
+  for (const clip of manifest.clips) {
+    assert.ok(typeof clip.id === 'string' && clip.id.length > 0);
+    assert.equal(seenIds.has(clip.id), false, `Duplicate clip id '${clip.id}'`);
+    seenIds.add(clip.id);
+    assert.ok(manifest.roles[clip.role], `Unknown role '${clip.role}' on clip '${clip.id}'`);
+    assert.ok(typeof clip.priority === 'number' && typeof clip.cooldownSec === 'number');
+    for (const field of ['displayText', 'ttsText', 'displayTextEn', 'ttsTextEn']) {
+      assert.ok(typeof clip[field] === 'string' && clip[field].trim().length > 0, `Missing ${field} on clip '${clip.id}'`);
+    }
+  }
+});
+
+test('dual voice packs (zh & en) expose window.__VOICE_PACKS__ with 50 valid base64 clips and bilingual labels', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(rootDir, 'voices', 'voice_manifest.json'), 'utf8'));
+  const zhSrc = fs.readFileSync(path.join(rootDir, 'voices', 'voice_pack.js'), 'utf8');
+  const enSrc = fs.readFileSync(path.join(rootDir, 'voices', 'voice_pack_en.js'), 'utf8');
+
+  const packBox = { window: {} };
+  vm.createContext(packBox);
+  vm.runInContext(zhSrc, packBox);
+  vm.runInContext(enSrc, packBox);
+
+  const packs = packBox.window.__VOICE_PACKS__;
+  assert.ok(packs && packs.zh && packs.en, 'Expected window.__VOICE_PACKS__.zh and .en');
+  assert.equal(packBox.window.__VOICE_PACK__, packs.zh, 'window.__VOICE_PACK__ must alias window.__VOICE_PACKS__.zh');
+
+  for (const [lang, pack] of [['zh', packs.zh], ['en', packs.en]]) {
+    assert.ok(pack.roles && pack.clips, `Invalid pack structure for ${lang}`);
+    for (const roleId of Object.keys(manifest.roles)) {
+      const r = pack.roles[roleId];
+      assert.ok(r, `Missing role '${roleId}' in ${lang} pack`);
+      assert.equal(r.speakerLabel, manifest.roles[roleId].speakerLabel);
+      assert.equal(r.speakerLabelEn, manifest.roles[roleId].speakerLabelEn);
+    }
+    assert.equal(Object.keys(pack.clips).length, 50, `Expected 50 clips in ${lang} pack`);
+    for (const clip of manifest.clips) {
+      const entry = pack.clips[clip.id];
+      assert.ok(entry, `Missing clip '${clip.id}' in ${lang} pack`);
+      assert.equal(entry.role, clip.role);
+      assert.equal(entry.displayText, clip.displayText);
+      assert.equal(entry.displayTextEn, clip.displayTextEn);
+      assert.ok(typeof entry.mime === 'string' && entry.mime.startsWith('audio/'));
+      assert.ok(typeof entry.data === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(entry.data), `Invalid base64 data for ${lang}:${clip.id}`);
+      const rawBytes = Buffer.from(entry.data, 'base64');
+      assert.ok(rawBytes.length > 200, `Audio payload too small for ${lang}:${clip.id}`);
+    }
+  }
+});
+
+test('src/i18n.js dictionary parity, placeholder matching, and HTML/JS key resolution', () => {
+  const i18nSrc = fs.readFileSync(path.join(rootDir, 'src', 'i18n.js'), 'utf8');
+  const i18nBox = { window: {} };
+  vm.createContext(i18nBox);
+  vm.runInContext(i18nSrc, i18nBox);
+  const I18n = i18nBox.window.I18n;
+  assert.ok(I18n && I18n.DICT && I18n.DICT.zh && I18n.DICT.en, 'Expected I18n.DICT.zh and .en');
+
+  const zhKeys = Object.keys(I18n.DICT.zh).sort();
+  const enKeys = Object.keys(I18n.DICT.en).sort();
+  assert.deepEqual(zhKeys, enKeys, 'DICT.zh and DICT.en must have identical key sets');
+  assert.ok(zhKeys.length >= 140, `Expected rich i18n dictionary, got ${zhKeys.length} keys`);
+
+  const extractTokens = (str) => [...String(str).matchAll(/\{([a-zA-Z0-9_]+)\}/g)].map((m) => m[1]).sort();
+  for (const key of zhKeys) {
+    assert.ok(typeof I18n.DICT.zh[key] === 'string' && I18n.DICT.zh[key].length > 0, `Empty DICT.zh['${key}']`);
+    assert.ok(typeof I18n.DICT.en[key] === 'string' && I18n.DICT.en[key].length > 0, `Empty DICT.en['${key}']`);
+    assert.deepEqual(extractTokens(I18n.DICT.zh[key]), extractTokens(I18n.DICT.en[key]), `Placeholder mismatch on i18n key '${key}'`);
+  }
+
+  const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  const htmlKeys = [...html.matchAll(/data-i18n(?:-[a-z]+)?="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(htmlKeys.length >= 100, 'Expected data-i18n* bindings in index.html');
+  for (const key of htmlKeys) {
+    assert.ok(Object.prototype.hasOwnProperty.call(I18n.DICT.zh, key), `Missing HTML i18n key '${key}' in DICT.zh`);
+    assert.ok(Object.prototype.hasOwnProperty.call(I18n.DICT.en, key), `Missing HTML i18n key '${key}' in DICT.en`);
+  }
+
+  const jsFiles = fs.readdirSync(path.join(rootDir, 'src')).filter((f) => f.endsWith('.js') && f !== 'three.bundle.js' && f !== 'i18n.js');
+  let jsKeyCount = 0;
+  for (const file of jsFiles) {
+    const src = fs.readFileSync(path.join(rootDir, 'src', file), 'utf8');
+    for (const m of src.matchAll(/\bI18n\.t\(\s*(['"])([^'"]+)\1/g)) {
+      const key = m[2];
+      jsKeyCount++;
+      assert.ok(Object.prototype.hasOwnProperty.call(I18n.DICT.zh, key), `Missing JS i18n key '${key}' (${file}) in DICT.zh`);
+      assert.ok(Object.prototype.hasOwnProperty.call(I18n.DICT.en, key), `Missing JS i18n key '${key}' (${file}) in DICT.en`);
+    }
+  }
+  assert.ok(jsKeyCount >= 200, `Expected static I18n.t calls across src/*.js, got ${jsKeyCount}`);
+
+  I18n.setLang('en', false);
+  assert.equal(I18n.getLang(), 'en');
+  assert.equal(I18n.resolveVoiceLang('auto'), 'en');
+  assert.equal(I18n.resolveVoiceLang('zh'), 'zh');
+  assert.equal(I18n.field({ name: '中文', nameEn: 'English' }, 'name'), 'English');
+});
+
+test('all GameLogic catalogs and MEDAL_CATALOG include non-empty English fields and bilingual rating/record IDs', () => {
+  for (const w of Object.values(GameLogic.WEAPON_CATALOG)) {
+    for (const f of ['nameEn', 'shortNameEn', 'descEn']) {
+      assert.ok(typeof w[f] === 'string' && w[f].trim().length > 0, `Missing WEAPON_CATALOG.${w.id}.${f}`);
+    }
+  }
+  for (const t of Object.values(GameLogic.THROWABLE_CATALOG)) {
+    for (const f of ['nameEn', 'shortNameEn']) {
+      assert.ok(typeof t[f] === 'string' && t[f].trim().length > 0, `Missing THROWABLE_CATALOG.${t.id}.${f}`);
+    }
+  }
+  assert.deepEqual(
+    ['recruit', 'standard', 'veteran', 'realism'].map((id) => GameLogic.DIFFICULTIES[id].nameEn),
+    ['Recruit', 'Standard', 'Veteran', 'Realism']
+  );
+  for (const d of Object.values(GameLogic.DIFFICULTIES)) {
+    for (const f of ['nameEn', 'badgeEn', 'summaryEn']) {
+      assert.ok(typeof d[f] === 'string' && d[f].trim().length > 0, `Missing DIFFICULTIES.${d.id}.${f}`);
+    }
+  }
+  for (const m of Object.values(GameLogic.MUTATORS)) {
+    for (const f of ['nameEn', 'descEn']) {
+      assert.ok(typeof m[f] === 'string' && m[f].trim().length > 0, `Missing MUTATORS.${m.id}.${f}`);
+    }
+  }
+  for (const s of Object.values(GameLogic.GUN_SKINS)) {
+    for (const f of ['nameEn', 'unlockDescEn']) {
+      assert.ok(typeof s[f] === 'string' && s[f].trim().length > 0, `Missing GUN_SKINS.${s.id}.${f}`);
+    }
+  }
+  for (const p of GameLogic.AIRDROP_PERKS) {
+    for (const f of ['nameEn', 'shortTagEn', 'descEn']) {
+      assert.ok(typeof p[f] === 'string' && p[f].trim().length > 0, `Missing AIRDROP_PERKS.${p.id}.${f}`);
+    }
+  }
+  for (const st of GameLogic.TRAINING_STAGES) {
+    for (const f of ['nameEn', 'shortNameEn']) {
+      assert.ok(typeof st[f] === 'string' && st[f].trim().length > 0, `Missing TRAINING_STAGES[${st.id}].${f}`);
+    }
+  }
+
+  const expectedMedalIds = ['ghost_of_storm', 'untouchable', 'demo_expert', 'speedrun', 'sharpshooter', 'shadow_blade'];
+  assert.deepEqual(Object.keys(GameLogic.MEDAL_CATALOG), expectedMedalIds);
+  for (const id of expectedMedalIds) {
+    const medal = GameLogic.MEDAL_CATALOG[id];
+    assert.ok(medal && medal.id === id && medal.name && medal.nameEn, `Invalid MEDAL_CATALOG.${id}`);
+  }
+
+  const rating = GameLogic.computeMissionRating({
+    elapsedSec: 150, kills: 12, shotsFired: 20, shotsHit: 18, crits: 7,
+    alarmsTriggered: 0, damageTaken: 0, barrelKills: 2, meleeKills: 2,
+  });
+  assert.deepEqual(Array.from(rating.medalIds), expectedMedalIds);
+  const ghostCareer = GameLogic.updateCareerRecords(null, {
+    victory: true, grade: 'A', score: 4000, elapsedSec: 150, medalIds: ['ghost_of_storm'],
+  });
+  assert.equal(ghostCareer.nextProfile.ghostClears, 1);
+
+  const recTimed = GameLogic.updateTrainingRecords(null, 'timed', { duration: 60, score: 500, kills: 5 });
+  assert.deepEqual(Array.from(recTimed.noteIds), ['best_score']);
+  const recStage = GameLogic.updateTrainingRecords(null, 'stage', { stageId: 1, cleared: true, time: 40 });
+  assert.ok(recStage.noteIds.includes('best_time') && recStage.noteIds.includes('first_clear'));
+});
+
+test('sanitizeUserSettings validates voiceLang and computeWatchdogTimeoutMs scales EN vs ZH within bounds', () => {
+  assert.equal(GameLogic.sanitizeUserSettings(null).voiceLang, 'auto');
+  assert.equal(GameLogic.sanitizeUserSettings({ voiceLang: 'zh' }).voiceLang, 'zh');
+  assert.equal(GameLogic.sanitizeUserSettings({ voiceLang: 'en' }).voiceLang, 'en');
+  assert.equal(GameLogic.sanitizeUserSettings({ voiceLang: 'jp' }).voiceLang, 'auto');
+
+  assert.equal(GameLogic.computeWatchdogTimeoutMs('', 'en'), 4000);
+  assert.equal(GameLogic.computeWatchdogTimeoutMs('OK', 'en'), 4000);
+  assert.equal(GameLogic.computeWatchdogTimeoutMs('收到', 'zh'), 4000);
+
+  const enSample = 'Overwatch copy. Move to Pier 04 and breach Relay A.'; // 50 chars -> 50*85+2500 = 6750
+  const zhSample = '守望者收到，前往零四号码头突入并破解中继器甲。'; // 23 chars -> 23*290+2500 = 9170
+  const enMs = GameLogic.computeWatchdogTimeoutMs(enSample, 'en');
+  const enAutoMs = GameLogic.computeWatchdogTimeoutMs(enSample);
+  const zhMs = GameLogic.computeWatchdogTimeoutMs(zhSample, 'zh');
+  assert.equal(enMs, enSample.length * 85 + 2500);
+  assert.equal(enAutoMs, enMs);
+  assert.equal(zhMs, zhSample.length * 290 + 2500);
+  assert.ok(enMs >= 4000 && enMs <= 22000 && zhMs >= 4000 && zhMs <= 22000);
+  assert.equal(GameLogic.computeWatchdogTimeoutMs('A'.repeat(400), 'en'), 22000);
+  assert.equal(GameLogic.computeWatchdogTimeoutMs('测'.repeat(300), 'zh'), 22000);
+});
+
+test('HTML shell loads src/i18n.js classically with #lang-switch & #opt-voice-lang and lazy-loads voice packs', () => {
+  const html = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+  assert.equal(/<script[^>]+type=["']module["']/i.test(html), false, 'Must preserve classic scripts');
+  const i18nScriptIdx = html.indexOf('src="src/i18n.js"');
+  const voiceLogicScriptIdx = html.indexOf('src="src/voice_logic.js"');
+  assert.ok(i18nScriptIdx !== -1 && voiceLogicScriptIdx !== -1 && i18nScriptIdx < voiceLogicScriptIdx, 'src/i18n.js must load before src/voice_logic.js');
+  assert.ok(html.includes('id="lang-switch"') && html.includes('data-lang="zh"') && html.includes('data-lang="en"'));
+  assert.ok(html.includes('id="opt-voice-lang"') && html.includes('value="auto"'));
+  assert.equal(/<script\b[^>]*\bsrc=["']voices\/voice_pack(?:_en)?\.js["']/i.test(html), false, 'Must NOT statically eager-load voice_pack*.js in index.html');
+
+  // Verify VoiceEngine lazy-load & dual-lang cache/label APIs
+  const appended = [];
+  const veBox = {
+    performance: { now: () => 1000 },
+    setTimeout,
+    clearTimeout,
+    atob: (b64) => Buffer.from(b64, 'base64').toString('binary'),
+    document: {
+      head: { appendChild: (el) => appended.push(el) },
+      createElement: (tag) => ({ tagName: tag.toUpperCase(), src: '', async: false, onload: null, onerror: null }),
+    },
+    window: null,
+  };
+  veBox.window = veBox;
+  vm.createContext(veBox);
+  vm.runInContext(logicSrc, veBox);
+  const VoiceEngine = vm.runInContext('VoiceEngine', veBox);
+  const ve = new VoiceEngine({ voiceMode: 'radio', voiceVolume: 0.85, volume: 0.72, setVoiceDucking() {}, playRadioPTT() {}, startRadioCarrier() {}, stopRadioCarrier() {} });
+  assert.equal(ve.voiceLang, 'zh');
+  assert.equal(ve.getRoleLabel('instructor', 'en'), 'INSTRUCTOR');
+  assert.equal(ve.getRoleLabel('watcher', 'en'), 'OVERWATCH // CH-04');
+  assert.equal(ve.getRoleLabel('evac', 'en'), 'EVAC-01');
+  const p1 = ve.setVoiceLang('en');
+  const p2 = ve.ensurePackLoaded('en');
+  assert.equal(ve.voiceLang, 'en');
+  assert.equal(p1, p2);
+  assert.equal(appended.length, 1);
+  assert.equal(appended[0].src, 'voices/voice_pack_en.js');
 });
 
 console.log(`ALL LOGIC TESTS PASSED (${passed}/${passed})`);

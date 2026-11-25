@@ -10,6 +10,11 @@
 const ExtremeGfx = (() => {
   'use strict';
 
+  const _warmupText = (key, fallback, params) => {
+    const i18n = typeof I18n !== 'undefined' ? I18n : (typeof window !== 'undefined' ? window.I18n : null);
+    return i18n && typeof i18n.t === 'function' ? i18n.t(key, params) : fallback;
+  };
+
   const FULLSCREEN_VERT = /* glsl */ `
     out vec2 vUv;
     void main() {
@@ -177,7 +182,7 @@ const ExtremeGfx = (() => {
 
       const steps = [
         {
-          label: '烘焙微表面细节噪点',
+          label: _warmupText('warmup.bakeMicroNoise', '烘焙微表面细节噪点'),
           run: () => {
             state.assets.detailNoise = this._bakeTarget(256, 256, /* glsl */ `
               in vec2 vUv;
@@ -193,7 +198,7 @@ const ExtremeGfx = (() => {
           },
         },
         {
-          label: '烘焙湿滑沥青高度场',
+          label: _warmupText('warmup.bakeAsphaltHeight', '烘焙湿滑沥青高度场'),
           run: () => {
             state.asphaltBaseRt = this._bakeTargetRt(1024, 1024, /* glsl */ `
               in vec2 vUv;
@@ -210,7 +215,7 @@ const ExtremeGfx = (() => {
           },
         },
         {
-          label: '合成沥青漫反射与粗糙度',
+          label: _warmupText('warmup.synthAsphaltMaps', '合成沥青漫反射与粗糙度'),
           run: () => {
             const baseTex = state.asphaltBaseRt.texture;
             state.assets.asphaltDiff = this._bakeTarget(1024, 1024, /* glsl */ `
@@ -249,7 +254,7 @@ const ExtremeGfx = (() => {
           },
         },
         {
-          label: '生成沥青高精度法线贴图',
+          label: _warmupText('warmup.genAsphaltNormal', '生成沥青高精度法线贴图'),
           run: () => {
             const baseTex = state.asphaltBaseRt.texture;
             state.assets.asphaltNorm = this._bakeTarget(1024, 1024, /* glsl */ `
@@ -271,7 +276,7 @@ const ExtremeGfx = (() => {
           },
         },
         {
-          label: '烘焙工业水泥地坪材质',
+          label: _warmupText('warmup.bakeConcreteBase', '烘焙工业水泥地坪材质'),
           run: () => {
             state.concreteBaseRt = this._bakeTargetRt(1024, 1024, /* glsl */ `
               in vec2 vUv;
@@ -304,7 +309,7 @@ const ExtremeGfx = (() => {
           },
         },
         {
-          label: '合成水泥粗糙度与法线',
+          label: _warmupText('warmup.synthConcreteMaps', '合成水泥粗糙度与法线'),
           run: () => {
             const baseTex = state.concreteBaseRt.texture;
             state.assets.concreteRough = this._bakeTarget(1024, 1024, /* glsl */ `
@@ -340,7 +345,7 @@ const ExtremeGfx = (() => {
           },
         },
         {
-          label: '烘焙暮色 HDR 环境光探针',
+          label: _warmupText('warmup.bakeHdrProbe', '烘焙暮色 HDR 环境光探针'),
           run: () => {
             state.hdrEquirectRt = this._bakeTargetRt(512, 256, /* glsl */ `
               in vec2 vUv;
@@ -412,7 +417,7 @@ const ExtremeGfx = (() => {
 
     async bakeExtremeAssetsAsync(maxAniso = 16, onProgress = null, isCancelled = null) {
       if (this.cachedAssets) {
-        if (onProgress) onProgress(1.0, '复用已烘焙 PBR 纹理');
+        if (onProgress) onProgress(1.0, _warmupText('warmup.reusePbr', '复用已烘焙 PBR 纹理'));
         return this.cachedAssets;
       }
       const { steps, cleanupTransients, finalize } = this._createBakeSteps(maxAniso);
@@ -433,7 +438,7 @@ const ExtremeGfx = (() => {
           return null;
         }
         const res = finalize();
-        if (onProgress) onProgress(1.0, 'PBR 纹理烘焙完成');
+        if (onProgress) onProgress(1.0, _warmupText('warmup.bakeComplete', 'PBR 纹理烘焙完成'));
         return res;
       } catch (err) {
         cleanupTransients();
@@ -2416,7 +2421,7 @@ const ExtremeGfx = (() => {
             sl.shadow.needsUpdate = true;
           }
         }
-        report(0.08, '收集场景材质变体');
+        report(0.08, _warmupText('warmup.collectVariants', '收集场景材质变体'));
         await yieldToMainThread(true);
         if (isCancelled && isCancelled()) return false;
 
@@ -2496,7 +2501,10 @@ const ExtremeGfx = (() => {
           this.renderer.setRenderTarget(batch.target);
           await this.renderer.compileAsync(group, this.camera, this.scene);
           done++;
-          report(0.12 + 0.65 * (done / totalSteps), `异步预编译场景着色器 (${done}/${compileQueue.length})`);
+          report(
+            0.12 + 0.65 * (done / totalSteps),
+            _warmupText('warmup.compileSceneShaders', `异步预编译场景着色器 (${done}/${compileQueue.length})`, { done, total: compileQueue.length })
+          );
           await yieldToMainThread(true);
         }
 
@@ -2508,13 +2516,13 @@ const ExtremeGfx = (() => {
           await this.renderer.compileAsync(this.postScene, this.postCamera, this.postScene);
           if ((i & 3) === 3 || i === postPasses.length - 1) {
             done++;
-            report(0.12 + 0.85 * Math.min(1, done / totalSteps), '异步预编译后期与光学管线');
+            report(0.12 + 0.85 * Math.min(1, done / totalSteps), _warmupText('warmup.compilePostPipeline', '异步预编译后期与光学管线'));
             await yieldToMainThread(true);
           }
         }
 
         this._historyValid = false;
-        report(1.0, '极限画质管线就绪');
+        report(1.0, _warmupText('warmup.pipelineReady', '极限画质管线就绪'));
         return true;
       } finally {
         this.renderer.setRenderTarget(prevTarget);

@@ -16,9 +16,11 @@ const GameLogic = (() => {
     return 'play';
   }
 
-  function computeWatchdogTimeoutMs(text) {
+  function computeWatchdogTimeoutMs(text, lang) {
     const len = typeof text === 'string' ? text.length : 0;
-    return Math.max(4000, Math.min(22000, len * 290 + 2500));
+    const isEn = lang === 'en' || (typeof text === 'string' && !/[\u4e00-\u9fff]/.test(text) && text.length > 0);
+    const perCharMs = isEn ? 85 : 290;
+    return Math.max(4000, Math.min(22000, Math.round(len * perCharMs + 2500)));
   }
 
   function computeRelativeHitAngleDeg(playerPos, playerYaw, sourcePos) {
@@ -176,6 +178,7 @@ const GameLogic = (() => {
       volume: 0.72,
       voiceVolume: 0.85,
       voiceMode: 'radio',
+      voiceLang: 'auto',
       toggleAds: false,
       invertY: false,
     };
@@ -193,11 +196,13 @@ const GameLogic = (() => {
       ? Math.round(Math.max(0, Math.min(1, vVolNum)) * 100) / 100
       : defaults.voiceVolume;
     const voiceMode = ['radio', 'clean', 'off'].includes(raw.voiceMode) ? raw.voiceMode : defaults.voiceMode;
+    const voiceLang = ['auto', 'zh', 'en'].includes(raw.voiceLang) ? raw.voiceLang : defaults.voiceLang;
     return {
       sensitivity,
       volume,
       voiceVolume,
       voiceMode,
+      voiceLang,
       toggleAds: !!raw.toggleAds,
       invertY: !!raw.invertY,
     };
@@ -262,7 +267,9 @@ const GameLogic = (() => {
     {
       id: 1,
       name: '西区集装箱 · 中继器 A 攻防',
+      nameEn: 'West Container Yard · Relay A Assault',
       shortName: '西区集装箱 A',
+      shortNameEn: 'West Yard A',
       relayId: 'A',
       isExtractStage: false,
       voiceId: 'train_stage_1',
@@ -281,7 +288,9 @@ const GameLogic = (() => {
     {
       id: 2,
       name: '铁皮仓库 · 室内 CQB 近战',
+      nameEn: 'Corrugated Warehouse · Interior CQB',
       shortName: '铁皮仓库 B',
+      shortNameEn: 'Warehouse B',
       relayId: 'B',
       isExtractStage: false,
       voiceId: 'train_stage_2',
@@ -300,7 +309,9 @@ const GameLogic = (() => {
     {
       id: 3,
       name: '东侧龙门吊 · 制高点与爆破',
+      nameEn: 'East Gantry Crane · Overlook & Demo',
       shortName: '龙门吊高台 C',
+      shortNameEn: 'Gantry Crane C',
       relayId: 'C',
       isExtractStage: false,
       voiceId: 'train_stage_3',
@@ -319,7 +330,9 @@ const GameLogic = (() => {
     {
       id: 4,
       name: '终局全面封锁 · 突围撤离',
+      nameEn: 'Final Lockdown · Combat Extraction',
       shortName: '终局封锁撤离',
+      shortNameEn: 'Final Extraction',
       relayId: null,
       isExtractStage: true,
       voiceId: 'train_stage_4',
@@ -330,7 +343,9 @@ const GameLogic = (() => {
     {
       id: 5,
       name: '潜行暗杀 · 消音与发报打断',
+      nameEn: 'Stealth Infiltration · Suppress & Deny Comms',
       shortName: '潜行暗杀演练',
+      shortNameEn: 'Stealth Drill',
       relayId: 'A',
       isExtractStage: false,
       stealthDrill: true,
@@ -349,7 +364,9 @@ const GameLogic = (() => {
     {
       id: 6,
       name: '重装破盾 · EMP 与高台反狙',
+      nameEn: 'Heavy Breaching · EMP & Counter-Sniper',
       shortName: '破盾反狙演练',
+      shortNameEn: 'Breach & Counter-Sniper',
       relayId: 'C',
       isExtractStage: false,
       voiceId: 'train_stage_6',
@@ -605,8 +622,11 @@ const GameLogic = (() => {
       id: 'car47',
       slot: 1,
       name: 'CAR-47 破晓 // 突击步枪',
+      nameEn: 'CAR-47 Dawnbreaker // Assault Rifle',
       shortName: 'CAR-47',
+      shortNameEn: 'CAR-47',
       desc: '全自动均衡主战步枪，稳健射速与中距离压制，支持现场装卸消音器。',
+      descEn: 'Balanced full-auto service rifle with steady fire rate and mid-range suppression; field-detachable suppressor.',
       magSize: 30,
       maxReserve: 180,
       fireRate: 0.092,
@@ -630,8 +650,11 @@ const GameLogic = (() => {
       id: 'dmr',
       slot: 1,
       name: 'MK-14 夜枭 // 精确射手步枪',
+      nameEn: 'MK-14 Nightowl // Designated Marksman Rifle',
       shortName: 'MK-14 DMR',
+      shortNameEn: 'MK-14 DMR',
       desc: '高倍率半自动反狙重步枪，附带高护盾穿透力，点名弱点与高台狙击极佳。',
+      descEn: 'High-magnification semi-auto counter-sniper rifle with high shield penetration; excels at weakpoints and elevated targets.',
       magSize: 12,
       maxReserve: 72,
       fireRate: 0.25,
@@ -655,8 +678,11 @@ const GameLogic = (() => {
       id: 'shotgun',
       slot: 1,
       name: 'M890 破门者 // 战术霰弹枪',
+      nameEn: 'M890 Breacher // Tactical Shotgun',
       shortName: 'M890',
+      shortNameEn: 'M890',
       desc: '7 枚钢珠弹丸近战清场霸主，仓库近距离接敌瞬间融化机械犬与护甲。',
+      descEn: '7-pellet buckshot CQB room-clearer; shreds cyber-hounds and heavy armor inside warehouse range.',
       magSize: 8,
       maxReserve: 48,
       fireRate: 0.56,
@@ -680,8 +706,11 @@ const GameLogic = (() => {
       id: 'pistol',
       slot: 2,
       name: 'USP-9 幽灵 // 战术副手枪',
+      nameEn: 'USP-9 Phantom // Tactical Sidearm',
       shortName: 'USP-9',
+      shortNameEn: 'USP-9',
       desc: '出厂预装低噪消音器与高爆头倍率，切枪迅捷，专为潜行摸哨与备用保底设计。',
+      descEn: 'Factory-suppressed sidearm with high headshot multiplier and fast draw; built for silent sentry takedowns and backup.',
       magSize: 15,
       maxReserve: 90,
       fireRate: 0.16,
@@ -707,7 +736,9 @@ const GameLogic = (() => {
     emp: {
       id: 'emp',
       name: 'EMP 电磁手雷',
+      nameEn: 'EMP Grenade',
       shortName: 'EMP雷',
+      shortNameEn: 'EMP',
       fuseTime: 1.05,
       radius: 8.5,
       stunSec: 5.5,
@@ -718,7 +749,9 @@ const GameLogic = (() => {
     frag: {
       id: 'frag',
       name: 'M67 破片手雷',
+      nameEn: 'M67 Frag Grenade',
       shortName: '破片雷',
+      shortNameEn: 'FRAG',
       fuseTime: 1.5,
       radius: 7.5,
       stunSec: 0.4,
@@ -729,7 +762,9 @@ const GameLogic = (() => {
     decoy: {
       id: 'decoy',
       name: '声波诱饵器',
+      nameEn: 'Acoustic Decoy',
       shortName: '诱饵器',
+      shortNameEn: 'DECOY',
       fuseTime: 0.45,
       radius: 22.0,
       durationSec: 6.5,
@@ -742,8 +777,11 @@ const GameLogic = (() => {
     recruit: {
       id: 'recruit',
       name: '新兵护航',
+      nameEn: 'Recruit',
       badge: '零基础推荐',
+      badgeEn: 'Starter Friendly',
       summary: '温和准星磁吸 · 后坐力/散布减半 · 敌伤 0.55x · 脱战 3 秒回满 100 血 · 宽裕潜行与打断窗',
+      summaryEn: 'Gentle aim assist · 0.55x recoil/spread · 0.55x enemy dmg · 3s out-of-combat full 100 HP regen · generous stealth & interrupt windows',
       enemyHpMult: 0.78,
       enemyDmgMult: 0.55,
       enemySpeedScale: 0.85,
@@ -766,8 +804,11 @@ const GameLogic = (() => {
     standard: {
       id: 'standard',
       name: '标准行动',
+      nameEn: 'Standard',
       badge: '经典默认',
+      badgeEn: 'Classic Default',
       summary: '无辅助瞄准 · 1.0x 原版战术撤离平衡 · 脱战 5 秒回血至 65 HP · 1.0x 基础评分',
+      summaryEn: 'No aim assist · 1.0x tactical extraction balance · 5s regen up to 65 HP · 1.0x base score',
       enemyHpMult: 1.0,
       enemyDmgMult: 1.0,
       enemySpeedScale: 1.0,
@@ -790,8 +831,11 @@ const GameLogic = (() => {
     veteran: {
       id: 'veteran',
       name: '老兵特遣',
+      nameEn: 'Veteran',
       badge: '老枪手推荐',
+      badgeEn: 'Sharpshooter Pick',
       summary: '不堆血牛 · 敌军更快更准(1.14x移速/1.45x伤害) · 缩短发报打断窗 · 弱点暴击 +15% · 1.25x 评分',
+      summaryEn: 'No bullet sponges · faster, deadlier hostiles (1.14x speed / 1.45x dmg) · tighter radio interrupt · +15% weakpoint crit · 1.25x score',
       enemyHpMult: 1.1,
       enemyDmgMult: 1.45,
       enemySpeedScale: 1.14,
@@ -814,8 +858,11 @@ const GameLogic = (() => {
     realism: {
       id: 'realism',
       name: '拟真夜战',
+      nameEn: 'Realism',
       badge: '硬核无准星',
+      badgeEn: 'Hardcore · No Crosshair',
       summary: '去 2D 准星强依赖 3D/2.5D 瞄具 · 少 HUD 提示 · 高致死(1.75x) · 弱点暴击 +25% · 1.5x 评分',
+      summaryEn: 'No 2D crosshair (rely on 3D/2.5D optics) · minimal HUD · high lethality (1.75x) · +25% weakpoint crit · 1.5x score',
       enemyHpMult: 1.05,
       enemyDmgMult: 1.75,
       enemySpeedScale: 1.18,
@@ -917,37 +964,124 @@ const GameLogic = (() => {
     blackout: {
       id: 'blackout',
       name: '全图停电',
+      nameEn: 'Total Blackout',
       desc: '关闭港口大部分探照/仓库照明，极度依赖 F 枪灯与 Q 扫描',
+      descEn: 'Kills most pier floodlights and warehouse lighting; relies heavily on [F] weapon light and [Q] tactical scan.',
       scoreBonus: 0.2,
     },
     explosive_tide: {
       id: 'explosive_tide',
       name: '高爆狂潮',
+      nameEn: 'Volatile Cargo',
       desc: '码头增设额外高爆危化油桶并加快破片手雷清场节奏',
+      descEn: 'Deploys extra volatile hazmat fuel drums across the dock and accelerates frag-clearing pace.',
       scoreBonus: 0.15,
     },
     elite_patrol: {
       id: 'elite_patrol',
       name: '精锐巡防',
+      nameEn: 'Elite Patrol',
       desc: '开局巡防即投入防爆盾机兵与高台激光狙击手',
+      descEn: 'Deploys Riot Shield Units and elevated Laser Snipers directly into opening patrol waves.',
       scoreBonus: 0.25,
     },
   };
 
   const GUN_SKINS = {
-    standard: { id: 'standard', name: '标准暗钢', unlockDesc: '默认解锁', metalHex: 0x22262e, accentHex: 0x3b424d },
-    night_ops: { id: 'night_ops', name: '夜幕幽灵涂层', unlockDesc: '任意 A/S 级通关或获得“暴雨幽灵”勋章解锁', metalHex: 0x162432, accentHex: 0x24d8ff },
-    hazmat_blue: { id: 'hazmat_blue', name: '海军蓝 HAZMAT', unlockDesc: '累计 3 次通关或 S 级评价解锁', metalHex: 0x1a3854, accentHex: 0xff9f2e },
+    standard: {
+      id: 'standard',
+      name: '标准暗钢',
+      nameEn: 'Standard Dark Steel',
+      unlockDesc: '默认解锁',
+      unlockDescEn: 'Unlocked by default',
+      metalHex: 0x22262e,
+      accentHex: 0x3b424d,
+    },
+    night_ops: {
+      id: 'night_ops',
+      name: '夜幕幽灵涂层',
+      nameEn: 'Night-Ops Phantom Coat',
+      unlockDesc: '任意 A/S 级通关或获得“暴雨幽灵”勋章解锁',
+      unlockDescEn: 'Clear with A/S rank or earn the "Ghost of the Storm" medal',
+      metalHex: 0x162432,
+      accentHex: 0x24d8ff,
+    },
+    hazmat_blue: {
+      id: 'hazmat_blue',
+      name: '海军蓝 HAZMAT',
+      nameEn: 'Navy HAZMAT',
+      unlockDesc: '累计 3 次通关或 S 级评价解锁',
+      unlockDescEn: 'Complete 3 extractions or earn an S rank',
+      metalHex: 0x1a3854,
+      accentHex: 0xff9f2e,
+    },
   };
 
   const AIRDROP_PERKS = [
-    { id: 'ap_rounds', name: '穿甲钨芯弹', shortTag: '穿甲弹', desc: '+25% 武器伤害，并提升 0.35 正面护盾穿透力' },
-    { id: 'sleight_of_hand', name: '快手装填模块', shortTag: '快手装填', desc: '+35% 换弹速度与 1/2 切枪手感加速' },
-    { id: 'extended_pouches', name: '战术扩容弹袋', shortTag: '扩容弹袋', desc: '主副武器弹匣与备弹上限 +30%，并立即全额补满' },
-    { id: 'emp_overload', name: 'EMP 超导电容', shortTag: '超导EMP', desc: '手雷范围 x1.35、威力 +50%，并补充 +2 战术手雷' },
-    { id: 'adrenaline_stim', name: '战地肾上腺素', shortTag: '肾上腺素', desc: '每次击杀回复 8 HP，受击镜头震动衰减 45%' },
-    { id: 'tactical_optics', name: '脉冲超频模组', shortTag: '超频扫描', desc: 'Q 战术扫描冷却减半，暴击弱点伤害额外 +25%' },
+    {
+      id: 'ap_rounds',
+      name: '穿甲钨芯弹',
+      nameEn: 'Tungsten AP Rounds',
+      shortTag: '穿甲弹',
+      shortTagEn: 'AP Rounds',
+      desc: '+25% 武器伤害，并提升 0.35 正面护盾穿透力',
+      descEn: '+25% weapon damage and +0.35 frontal shield penetration.',
+    },
+    {
+      id: 'sleight_of_hand',
+      name: '快手装填模块',
+      nameEn: 'Sleight of Hand Rig',
+      shortTag: '快手装填',
+      shortTagEn: 'Fast Reload',
+      desc: '+35% 换弹速度与 1/2 切枪手感加速',
+      descEn: '+35% reload speed and faster [1]/[2] weapon swap.',
+    },
+    {
+      id: 'extended_pouches',
+      name: '战术扩容弹袋',
+      nameEn: 'Extended Tactical Pouches',
+      shortTag: '扩容弹袋',
+      shortTagEn: 'Ext. Mag',
+      desc: '主副武器弹匣与备弹上限 +30%，并立即全额补满',
+      descEn: '+30% magazine & reserve capacity for primary/sidearm, plus instant full resupply.',
+    },
+    {
+      id: 'emp_overload',
+      name: 'EMP 超导电容',
+      nameEn: 'EMP Overcharge Capacitor',
+      shortTag: '超导EMP',
+      shortTagEn: 'EMP+',
+      desc: '手雷范围 x1.35、威力 +50%，并补充 +2 战术手雷',
+      descEn: '1.35x grenade radius, +50% damage, and +2 tactical grenades.',
+    },
+    {
+      id: 'adrenaline_stim',
+      name: '战地肾上腺素',
+      nameEn: 'Combat Adrenaline Stim',
+      shortTag: '肾上腺素',
+      shortTagEn: 'Adrenaline',
+      desc: '每次击杀回复 8 HP，受击镜头震动衰减 45%',
+      descEn: 'Restore +8 HP per kill and reduce hit camera flinch by 45%.',
+    },
+    {
+      id: 'tactical_optics',
+      name: '脉冲超频模组',
+      nameEn: 'Overclocked Pulse Optics',
+      shortTag: '超频扫描',
+      shortTagEn: 'Pulse+',
+      desc: 'Q 战术扫描冷却减半，暴击弱点伤害额外 +25%',
+      descEn: 'Halves [Q] tactical scan cooldown and adds +25% weakpoint crit damage.',
+    },
   ];
+
+  const MEDAL_CATALOG = {
+    ghost_of_storm: { id: 'ghost_of_storm', name: '暴雨幽灵', nameEn: 'Ghost of the Storm' },
+    untouchable: { id: 'untouchable', name: '零伤突围', nameEn: 'Untouchable' },
+    demo_expert: { id: 'demo_expert', name: '爆破大师', nameEn: 'Demolition Expert' },
+    speedrun: { id: 'speedrun', name: '极速行动', nameEn: 'Speedrun Extraction' },
+    sharpshooter: { id: 'sharpshooter', name: '神射手', nameEn: 'Sharpshooter' },
+    shadow_blade: { id: 'shadow_blade', name: '暗影处决', nameEn: 'Shadow Executioner' },
+  };
 
   function computeShotDamage({
     weaponCfg,
@@ -1037,18 +1171,38 @@ const GameLogic = (() => {
     else if (finalScore >= 2600) grade = 'B';
 
     const medals = [];
-    if (alarmsTriggered === 0) medals.push('暴雨幽灵');
-    if (damageTaken <= 0) medals.push('零伤突围');
-    if (barrelKills >= 2) medals.push('爆破大师');
-    if (elapsedSec <= 210) medals.push('极速行动');
-    if (crits >= 6) medals.push('神射手');
-    if (meleeKills >= 2) medals.push('暗影处决');
+    const medalIds = [];
+    if (alarmsTriggered === 0) {
+      medalIds.push('ghost_of_storm');
+      medals.push(MEDAL_CATALOG.ghost_of_storm.name);
+    }
+    if (damageTaken <= 0) {
+      medalIds.push('untouchable');
+      medals.push(MEDAL_CATALOG.untouchable.name);
+    }
+    if (barrelKills >= 2) {
+      medalIds.push('demo_expert');
+      medals.push(MEDAL_CATALOG.demo_expert.name);
+    }
+    if (elapsedSec <= 210) {
+      medalIds.push('speedrun');
+      medals.push(MEDAL_CATALOG.speedrun.name);
+    }
+    if (crits >= 6) {
+      medalIds.push('sharpshooter');
+      medals.push(MEDAL_CATALOG.sharpshooter.name);
+    }
+    if (meleeKills >= 2) {
+      medalIds.push('shadow_blade');
+      medals.push(MEDAL_CATALOG.shadow_blade.name);
+    }
 
     return {
       grade,
       score: finalScore,
       accuracyPct: Math.round(acc * 100),
       medals,
+      medalIds,
     };
   }
 
@@ -1091,12 +1245,17 @@ const GameLogic = (() => {
       if (next.bestTimeSec === null || sec < next.bestTimeSec) {
         next.bestTimeSec = sec;
       }
-      const isGhost = Array.isArray(missionReport.medals) && missionReport.medals.includes('暴雨幽灵');
+      const hasGhostId = Array.isArray(missionReport.medalIds) && missionReport.medalIds.includes('ghost_of_storm');
+      const hasGhostName = Array.isArray(missionReport.medals) && (
+        missionReport.medals.includes('暴雨幽灵') || missionReport.medals.includes('ghost_of_storm')
+      );
+      const isGhost = hasGhostId || hasGhostName;
       if (isGhost) next.ghostClears++;
-      if (Array.isArray(missionReport.medals)) {
-        for (const m of missionReport.medals) {
-          if (!next.medalsEarned.includes(m)) next.medalsEarned.push(m);
-        }
+      const earnedList = Array.isArray(missionReport.medals) && missionReport.medals.length > 0
+        ? missionReport.medals
+        : (Array.isArray(missionReport.medalIds) ? missionReport.medalIds : []);
+      for (const m of earnedList) {
+        if (!next.medalsEarned.includes(m)) next.medalsEarned.push(m);
       }
       if ((g === 'A' || g === 'S' || isGhost) && !next.unlockedSkins.includes('night_ops')) {
         next.unlockedSkins.push('night_ops');
@@ -1187,6 +1346,7 @@ const GameLogic = (() => {
 
     let isNewRecord = false;
     const notes = [];
+    const noteIds = [];
 
     if (submode === 'timed') {
       const key = String(result.duration || 60);
@@ -1195,6 +1355,7 @@ const GameLogic = (() => {
         slot.bestScore = result.score || 0;
         isNewRecord = true;
         notes.push('最高分');
+        noteIds.push('best_score');
       }
       if ((result.kills || 0) > slot.bestKills) {
         slot.bestKills = result.kills || 0;
@@ -1208,9 +1369,11 @@ const GameLogic = (() => {
         next.endless.bestWave = wave;
         isNewRecord = true;
         notes.push('最高波次');
+        noteIds.push('best_wave');
       } else if (wave === next.endless.bestWave && kills > next.endless.bestKills) {
         isNewRecord = true;
         notes.push('最高击杀');
+        noteIds.push('best_kills');
       }
       if (kills > next.endless.bestKills) next.endless.bestKills = kills;
       if (time > next.endless.bestTime) next.endless.bestTime = +time.toFixed(1);
@@ -1220,18 +1383,23 @@ const GameLogic = (() => {
       if (result.invulnerable) {
         slot.practiceCleared = true;
       } else {
+        const wasCleared = !!slot.cleared;
         slot.cleared = true;
         const elapsed = +(result.time || 0).toFixed(1);
         if (slot.bestTime === null || elapsed < slot.bestTime) {
           slot.bestTime = elapsed;
           isNewRecord = true;
           notes.push('最快通关');
+          noteIds.push('best_time');
+        }
+        if (!wasCleared && !noteIds.includes('first_clear')) {
+          noteIds.push('first_clear');
         }
       }
       next.stages[key] = slot;
     }
 
-    return { nextRecords: next, isNewRecord, notes };
+    return { nextRecords: next, isNewRecord, notes, noteIds };
   }
 
   const QUALITY_PRESETS = ['extreme', 'high', 'medium', 'low'];
@@ -1774,6 +1942,7 @@ const GameLogic = (() => {
     MUTATORS,
     GUN_SKINS,
     AIRDROP_PERKS,
+    MEDAL_CATALOG,
     computeShotDamage,
     rollEndlessAirdropOptions,
     computeMissionRating,
@@ -1807,10 +1976,32 @@ const VoiceEngine = (() => {
   'use strict';
 
   const FALLBACK_ROLES = {
-    instructor: { speechPitch: 0.9, speechRate: 1.05 },
-    watcher: { speechPitch: 1.04, speechRate: 1.05 },
-    evac: { speechPitch: 0.95, speechRate: 1.1 },
+    instructor: { speakerLabel: '教官', speakerLabelEn: 'INSTRUCTOR', speechPitch: 0.9, speechRate: 1.05 },
+    watcher: { speakerLabel: '守望者 // 频道04', speakerLabelEn: 'OVERWATCH // CH-04', speechPitch: 1.04, speechRate: 1.05 },
+    evac: { speakerLabel: '撤离艇 // 01', speakerLabelEn: 'EVAC-01', speechPitch: 0.95, speechRate: 1.1 },
   };
+
+  function getGlobalRoot() {
+    if (typeof window !== 'undefined') return window;
+    if (typeof globalThis !== 'undefined') return globalThis;
+    return null;
+  }
+
+  function normalizeLang(lang, fallback = 'zh') {
+    if (lang === 'auto') {
+      if (typeof I18n !== 'undefined') {
+        if (typeof I18n.resolveVoiceLang === 'function') return I18n.resolveVoiceLang('auto') === 'en' ? 'en' : 'zh';
+        if (typeof I18n.getLang === 'function') return I18n.getLang() === 'en' ? 'en' : 'zh';
+      }
+      return fallback === 'en' ? 'en' : 'zh';
+    }
+    if (typeof lang === 'string') {
+      const trimmed = lang.trim();
+      if (/^en/i.test(trimmed)) return 'en';
+      if (/^zh/i.test(trimmed)) return 'zh';
+    }
+    return fallback === 'en' ? 'en' : 'zh';
+  }
 
   function base64ToArrayBuffer(b64) {
     const bin = atob(b64);
@@ -1821,10 +2012,13 @@ const VoiceEngine = (() => {
   }
 
   class Manager {
-    constructor(audio) {
+    constructor(audio, opts = {}) {
       this.audio = audio;
+      const initLang = typeof opts === 'string' ? opts : (opts && opts.voiceLang);
+      this.voiceLang = normalizeLang(initLang, 'zh');
       this.bufferCache = new Map();
       this.decodePromises = new Map();
+      this.packLoadPromises = new Map();
       this.cooldowns = new Map();
       this.current = null;
       this.token = 0;
@@ -1847,31 +2041,163 @@ const VoiceEngine = (() => {
       }
     }
 
-    _getPackClip(clipId) {
-      const pack = typeof window !== 'undefined' ? window.__VOICE_PACK__ : null;
+    setVoiceLang(lang) {
+      this.voiceLang = normalizeLang(lang, 'zh');
+      return this.ensurePackLoaded(this.voiceLang);
+    }
+
+    ensurePackLoaded(lang = this.voiceLang) {
+      const target = normalizeLang(lang, this.voiceLang || 'zh');
+      const existing = this._getPack(target);
+      if (existing) return Promise.resolve(existing);
+      if (this.packLoadPromises.has(target)) {
+        return this.packLoadPromises.get(target);
+      }
+      if (typeof document === 'undefined' || !document.createElement) {
+        return Promise.resolve(null);
+      }
+      const parent = document.head || document.body || document.documentElement;
+      if (!parent) {
+        return Promise.resolve(null);
+      }
+
+      const src = target === 'en' ? 'voices/voice_pack_en.js' : 'voices/voice_pack.js';
+      let settledFailed = false;
+      const p = new Promise((resolve) => {
+        try {
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.onload = () => {
+            const loaded = this._getPack(target);
+            if (!loaded) {
+              settledFailed = true;
+              this.packLoadPromises.delete(target);
+            }
+            resolve(loaded);
+          };
+          script.onerror = () => {
+            settledFailed = true;
+            this.packLoadPromises.delete(target);
+            resolve(null);
+          };
+          parent.appendChild(script);
+        } catch (err) {
+          settledFailed = true;
+          this.packLoadPromises.delete(target);
+          resolve(null);
+        }
+      });
+      if (!settledFailed) {
+        this.packLoadPromises.set(target, p);
+      }
+      return p;
+    }
+
+    _getPack(lang = this.voiceLang) {
+      const target = normalizeLang(lang, this.voiceLang || 'zh');
+      const root = getGlobalRoot();
+      if (!root) return null;
+      if (root.__VOICE_PACKS__ && root.__VOICE_PACKS__[target]) {
+        return root.__VOICE_PACKS__[target];
+      }
+      if (target === 'zh' && root.__VOICE_PACK__) {
+        return root.__VOICE_PACK__;
+      }
+      return null;
+    }
+
+    _getAnyLoadedPack(clipId) {
+      const active = this._getPack(this.voiceLang);
+      if (active && (!clipId || (active.clips && active.clips[clipId]))) {
+        return active;
+      }
+      const root = getGlobalRoot();
+      if (!root) return null;
+      const packs = root.__VOICE_PACKS__;
+      if (packs && typeof packs === 'object') {
+        const keys = Object.keys(packs);
+        for (let i = 0; i < keys.length; i++) {
+          const p = packs[keys[i]];
+          if (p && (!clipId || (p.clips && p.clips[clipId]))) {
+            return p;
+          }
+        }
+      }
+      if (root.__VOICE_PACK__ && (!clipId || (root.__VOICE_PACK__.clips && root.__VOICE_PACK__.clips[clipId]))) {
+        return root.__VOICE_PACK__;
+      }
+      return null;
+    }
+
+    _getPackClip(clipId, lang = this.voiceLang) {
+      const pack = this._getPack(lang);
       return pack && pack.clips ? pack.clips[clipId] || null : null;
     }
 
-    _getRoleConfig(role) {
-      const pack = typeof window !== 'undefined' ? window.__VOICE_PACK__ : null;
+    _getRoleConfig(role, lang = this.voiceLang) {
+      const pack = this._getPack(lang) || this._getAnyLoadedPack();
       return (pack && pack.roles && pack.roles[role]) || FALLBACK_ROLES[role] || FALLBACK_ROLES.watcher;
     }
 
-    prewarm(clipIds) {
+    getClipSubtitle(clipId, uiLang) {
+      const fallbackLang = typeof I18n !== 'undefined' && typeof I18n.getLang === 'function'
+        ? I18n.getLang()
+        : this.voiceLang;
+      const lang = normalizeLang(uiLang || fallbackLang, this.voiceLang || 'zh');
+      const langPack = this._getPack(lang);
+      let clip = langPack && langPack.clips ? langPack.clips[clipId] : null;
+      if (!clip) {
+        const anyPack = this._getAnyLoadedPack(clipId);
+        clip = anyPack && anyPack.clips ? anyPack.clips[clipId] : null;
+      }
+      if (!clip) return '';
+      return lang === 'en'
+        ? (clip.displayTextEn || clip.displayText || '')
+        : (clip.displayText || clip.displayTextEn || '');
+    }
+
+    getRoleLabel(role, uiLang) {
+      const fallbackLang = typeof I18n !== 'undefined' && typeof I18n.getLang === 'function'
+        ? I18n.getLang()
+        : this.voiceLang;
+      const lang = normalizeLang(uiLang || fallbackLang, this.voiceLang || 'zh');
+      const pack = this._getPack(lang) || this._getAnyLoadedPack();
+      const packRole = pack && pack.roles && pack.roles[role];
+      const fb = FALLBACK_ROLES[role] || FALLBACK_ROLES.watcher;
+      if (lang === 'en') {
+        return (packRole && packRole.speakerLabelEn) || fb.speakerLabelEn || (packRole && packRole.speakerLabel) || fb.speakerLabel || '';
+      }
+      return (packRole && packRole.speakerLabel) || fb.speakerLabel || (packRole && packRole.speakerLabelEn) || fb.speakerLabelEn || '';
+    }
+
+    prewarm(clipIds, lang = this.voiceLang) {
       if (!this.audio || !this.audio.ctx || !Array.isArray(clipIds)) return;
-      for (let i = 0; i < clipIds.length; i++) {
-        this._decodeClip(clipIds[i]).catch(() => {});
+      const targetLang = normalizeLang(lang, this.voiceLang || 'zh');
+      const run = () => {
+        for (let i = 0; i < clipIds.length; i++) {
+          this._decodeClip(clipIds[i], targetLang).catch(() => {});
+        }
+      };
+      if (this._getPack(targetLang)) {
+        run();
+      } else {
+        this.ensurePackLoaded(targetLang).then((pack) => {
+          if (pack) run();
+        });
       }
     }
 
-    _decodeClip(clipId) {
-      if (this.bufferCache.has(clipId)) {
-        return Promise.resolve(this.bufferCache.get(clipId));
+    _decodeClip(clipId, lang = this.voiceLang) {
+      const targetLang = normalizeLang(lang, this.voiceLang || 'zh');
+      const cacheKey = `${targetLang}:${clipId}`;
+      if (this.bufferCache.has(cacheKey)) {
+        return Promise.resolve(this.bufferCache.get(cacheKey));
       }
-      if (this.decodePromises.has(clipId)) {
-        return this.decodePromises.get(clipId);
+      if (this.decodePromises.has(cacheKey)) {
+        return this.decodePromises.get(cacheKey);
       }
-      const clip = this._getPackClip(clipId);
+      const clip = this._getPackClip(clipId, targetLang);
       if (!clip || !clip.data || !this.audio || !this.audio.ctx) {
         return Promise.resolve(null);
       }
@@ -1879,29 +2205,46 @@ const VoiceEngine = (() => {
         try {
           const ab = base64ToArrayBuffer(clip.data);
           const audioBuf = await this.audio.ctx.decodeAudioData(ab);
-          this.bufferCache.set(clipId, audioBuf);
+          this.bufferCache.set(cacheKey, audioBuf);
           return audioBuf;
         } catch (err) {
           return null;
         } finally {
-          this.decodePromises.delete(clipId);
+          this.decodePromises.delete(cacheKey);
         }
       })();
-      this.decodePromises.set(clipId, p);
+      this.decodePromises.set(cacheKey, p);
       return p;
     }
 
-    _pickSpeechVoice(role) {
+    _pickSpeechVoice(role, lang = this.voiceLang) {
       const voices = this.cachedVoices;
       if (!voices || voices.length === 0) return null;
+      const targetLang = normalizeLang(lang, this.voiceLang || 'zh');
+      const preferFemale = role === 'watcher';
+
+      if (targetLang === 'en') {
+        const enUsVoices = voices.filter((v) => /^en[-_]us/i.test(v.lang || ''));
+        const enVoices = enUsVoices.length > 0 ? enUsVoices : voices.filter((v) => /^en\b/i.test(v.lang || ''));
+        const pool = enVoices.length > 0 ? enVoices : voices;
+        const byGender = pool.find((v) => {
+          const n = (v.name || '').toLowerCase();
+          return preferFemale
+            ? (n.includes('aria') || n.includes('jenny') || n.includes('zira') || n.includes('samantha') || n.includes('victoria') || n.includes('karen') || n.includes('female'))
+            : (n.includes('guy') || n.includes('christopher') || n.includes('david') || n.includes('mark') || n.includes('alex') || n.includes('daniel') || n.includes('ryan') || /\bmale\b/.test(n));
+        });
+        if (byGender) return byGender;
+        const natural = pool.find((v) => /natural|online/i.test(v.name || ''));
+        return natural || pool[0];
+      }
+
       const zhVoices = voices.filter((v) => /zh|cmn/i.test(v.lang || ''));
       const pool = zhVoices.length > 0 ? zhVoices : voices;
-      const preferFemale = role === 'watcher';
       const byGender = pool.find((v) => {
         const n = (v.name || '').toLowerCase();
         return preferFemale
           ? (n.includes('xiaoxiao') || n.includes('huihui') || n.includes('xiaoyi') || n.includes('female'))
-          : (n.includes('yunjian') || n.includes('yunxi') || n.includes('yunyang') || n.includes('kangkang') || n.includes('male'));
+          : (n.includes('yunjian') || n.includes('yunxi') || n.includes('yunyang') || n.includes('kangkang') || /\bmale\b/.test(n));
       });
       if (byGender) return byGender;
       const natural = pool.find((v) => /natural|online/i.test(v.name || ''));
@@ -1998,11 +2341,15 @@ const VoiceEngine = (() => {
         return { played: false, reason: 'disabled' };
       }
 
-      const packClip = this._getPackClip(clipId);
-      const text = opts.text || (packClip && packClip.displayText) || '';
-      const role = opts.role || (packClip && packClip.role) || 'watcher';
-      const priority = opts.priority ?? (packClip && packClip.priority) ?? 2;
-      const cooldownSec = opts.cooldownSec ?? (packClip && packClip.cooldownSec) ?? 0;
+      const activeLang = normalizeLang(opts.voiceLang || this.voiceLang || 'zh');
+      const packClip = this._getPackClip(clipId, activeLang);
+      const anyPack = !packClip ? this._getAnyLoadedPack(clipId) : null;
+      const metaClip = packClip || (anyPack && anyPack.clips && anyPack.clips[clipId]) || null;
+
+      const text = opts.text || this.getClipSubtitle(clipId, activeLang) || (metaClip && (metaClip.displayText || metaClip.displayTextEn)) || '';
+      const role = opts.role || (metaClip && metaClip.role) || 'watcher';
+      const priority = opts.priority ?? (metaClip && metaClip.priority) ?? 2;
+      const cooldownSec = opts.cooldownSec ?? (metaClip && metaClip.cooldownSec) ?? 0;
 
       const nowMs = performance.now();
       const cooldownUntil = this.cooldowns.get(clipId) || 0;
@@ -2021,6 +2368,7 @@ const VoiceEngine = (() => {
       const entry = {
         token: myToken,
         clipId,
+        voiceLang: activeLang,
         priority,
         role,
         text,
@@ -2036,8 +2384,21 @@ const VoiceEngine = (() => {
       this.audio.startRadioCarrier();
       if (entry.onStart) entry.onStart();
 
-      this._decodeClip(clipId).then((audioBuf) => {
+      const decodePromise = this._getPack(activeLang)
+        ? this._decodeClip(clipId, activeLang)
+        : this.ensurePackLoaded(activeLang).then(() => {
+            if (!this.current || this.current.token !== myToken) return null;
+            return this._decodeClip(clipId, activeLang);
+          });
+
+      decodePromise.then((audioBuf) => {
         if (!this.current || this.current.token !== myToken) return;
+        const loadedClip = this._getPackClip(clipId, activeLang)
+          || ((this._getAnyLoadedPack(clipId) || {}).clips || {})[clipId]
+          || null;
+        if (opts.cooldownSec === undefined && cooldownSec === 0 && loadedClip && loadedClip.cooldownSec > 0) {
+          this.cooldowns.set(clipId, performance.now() + loadedClip.cooldownSec * 1000);
+        }
         if (audioBuf && this.audio.ctx) {
           const src = this.audio.ctx.createBufferSource();
           src.buffer = audioBuf;
@@ -2057,24 +2418,29 @@ const VoiceEngine = (() => {
           return;
         }
 
-        // 无预生成缓冲时降级使用浏览器 speechSynthesis
-        this._speakWithSynthesis(entry, text);
+        // 无预生成缓冲时降级使用浏览器 speechSynthesis，优先采用当前语音语言对应的台词文本
+        const ttsText = activeLang === 'en'
+          ? ((loadedClip && loadedClip.displayTextEn) || opts.ttsText || opts.textEn || opts.text || (loadedClip && loadedClip.displayText) || '')
+          : ((loadedClip && loadedClip.displayText) || opts.ttsText || opts.text || (loadedClip && loadedClip.displayTextEn) || '');
+        if (!entry.text) entry.text = ttsText;
+        this._speakWithSynthesis(entry, ttsText, activeLang);
       });
 
       return { played: true, reason: 'ok' };
     }
 
-    _speakWithSynthesis(entry, text) {
-      if (typeof window === 'undefined' || !window.speechSynthesis || !text) {
+    _speakWithSynthesis(entry, ttsText, lang = this.voiceLang) {
+      if (typeof window === 'undefined' || !window.speechSynthesis || !ttsText) {
         this._finishCurrent(false);
         return;
       }
       try {
+        const targetLang = normalizeLang(lang, this.voiceLang || 'zh');
         window.speechSynthesis.cancel();
-        const utt = new SpeechSynthesisUtterance(text);
-        utt.lang = 'zh-CN';
-        const roleCfg = this._getRoleConfig(entry.role);
-        const voice = this._pickSpeechVoice(entry.role);
+        const utt = new SpeechSynthesisUtterance(ttsText);
+        utt.lang = targetLang === 'en' ? 'en-US' : 'zh-CN';
+        const roleCfg = this._getRoleConfig(entry.role, targetLang);
+        const voice = this._pickSpeechVoice(entry.role, targetLang);
         if (voice) utt.voice = voice;
         utt.pitch = roleCfg.speechPitch || 1.0;
         utt.rate = roleCfg.speechRate || 1.05;
@@ -2092,7 +2458,7 @@ const VoiceEngine = (() => {
             this._finishCurrent(false);
           }
         };
-        this._armWatchdog(GameLogic.computeWatchdogTimeoutMs(text), myToken);
+        this._armWatchdog(GameLogic.computeWatchdogTimeoutMs(ttsText, targetLang), myToken);
         window.speechSynthesis.speak(utt);
       } catch (e) {
         this._finishCurrent(false);

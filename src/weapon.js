@@ -123,8 +123,13 @@ const WeaponSystem = (() => {
     get currentConfig() {
       const cat = window.GameLogic && window.GameLogic.WEAPON_CATALOG;
       if (!cat) {
+        const i18n = typeof I18n !== 'undefined' ? I18n : (typeof window !== 'undefined' ? window.I18n : null);
         return {
-          id: 'car47', slot: 1, name: 'CAR-47 战术卡宾枪', shortName: 'CAR-47',
+          id: 'car47', slot: 1,
+          name: i18n && typeof i18n.t === 'function' ? i18n.t('weapon.car47.fallbackName') : 'CAR-47 战术卡宾枪',
+          nameEn: 'CAR-47 Tactical Carbine',
+          shortName: 'CAR-47',
+          shortNameEn: 'CAR-47',
           magSize: 30, maxReserve: 150, fireRate: 0.092, baseDamage: 27, critMult: 2.0,
           armorPierce: 0.15, hipSpread: 0.015, adsSpread: 0.0018, adsFov: 49,
           tacReloadTime: 1.48, emptyReloadTime: 1.92, noiseLoud: 40, noiseSuppressed: 11,
